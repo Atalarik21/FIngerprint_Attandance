@@ -1,1053 +1,888 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>ATTAMATION - Power Meter Monitor</title>
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700;900&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Absensi Online — Fingerprint System</title>
 <style>
-:root {
-  --bg:#04070f; --panel:#070d1a; --panel2:#0a1220;
-  --border:rgba(0,200,255,0.08);
-  --accent:#00cfff; --accent2:#00ff99; --accent3:#ff9800;
-  --danger:#ff4466; --muted:#4a6080; --text:#c8dff0;
-  --mono:'Share Tech Mono',monospace; --sans:'Exo 2',sans-serif;
-  --glow:0 0 20px rgba(0,207,255,0.15);
-}
+/* ── Reset & Base ── */
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--text);overflow-x:hidden}
-body::before{
-  content:'';position:fixed;inset:0;
-  background-image:linear-gradient(rgba(0,207,255,0.025) 1px,transparent 1px),
-                   linear-gradient(90deg,rgba(0,207,255,0.025) 1px,transparent 1px);
-  background-size:40px 40px;pointer-events:none;z-index:0
+:root{
+  --bg:#0f0f0d;
+  --bg2:#161614;
+  --bg3:#1e1e1b;
+  --border:#2a2a26;
+  --border2:#333330;
+  --text:#e8e8e0;
+  --text2:#a0a098;
+  --text3:#666660;
+  --green:#4caf50;
+  --green2:#2d5a27;
+  --red:#e53935;
+  --red2:#7a1e1e;
+  --yellow:#f9a825;
+  --blue:#1565c0;
+  --blue2:#0d3a7a;
+  --orange:#e65100;
+  --accent:#4caf50;
 }
-.wrap{max-width:1400px;margin:0 auto;padding:16px;position:relative;z-index:1}
+body{font-family:'IBM Plex Mono',monospace,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:13px}
 
-/* HEADER */
-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;
-  padding:12px 18px;background:var(--panel);border:1px solid var(--border);border-radius:12px;flex-wrap:wrap;gap:10px}
-.logo{display:flex;align-items:center;gap:12px}
-.logo-icon{width:36px;height:36px;border:2px solid var(--accent);border-radius:8px;
-  display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:var(--glow)}
-.logo h1{font-weight:900;font-size:19px;letter-spacing:2px;color:#fff}
-.logo h1 span{color:var(--accent)}
-.logo-sub{font-size:10px;color:var(--muted);letter-spacing:1px;margin-top:1px}
-.header-right{text-align:right}
-.clock{font-family:var(--mono);font-size:22px;color:var(--accent);letter-spacing:3px}
-.hdate{font-size:11px;color:var(--muted);margin-top:2px}
-
-/* STATUS BAR */
-.statusbar{display:flex;align-items:center;gap:10px;padding:7px 14px;
-  background:var(--panel);border:1px solid var(--border);border-radius:8px;margin-bottom:14px;font-size:12px;flex-wrap:wrap}
-.sdot{width:8px;height:8px;border-radius:50%;background:var(--danger);transition:all 0.3s;flex-shrink:0}
-.sdot.on{background:var(--accent2);box-shadow:0 0 8px var(--accent2)}
-.sdot.warn{background:var(--accent3)}
-#statusText{color:var(--muted)}
-.rs485-badge{margin-left:auto;font-family:var(--mono);font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid;transition:all 0.3s}
-.rs485-badge.ok{color:var(--accent2);border-color:rgba(0,255,153,0.3);background:rgba(0,255,153,0.05)}
-.rs485-badge.err{color:var(--danger);border-color:rgba(255,68,102,0.3);background:rgba(255,68,102,0.05)}
-
-/* TABS */
-.tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
-.tab{padding:8px 16px;border-radius:8px;cursor:pointer;font-weight:600;font-size:12px;letter-spacing:0.5px;
-  border:1px solid var(--border);color:var(--muted);background:var(--panel);transition:all 0.25s}
-.tab:hover{color:var(--accent);border-color:rgba(0,207,255,0.2)}
-.tab.active{background:linear-gradient(135deg,rgba(0,207,255,0.15),rgba(0,255,153,0.08));
-  color:var(--accent);border-color:rgba(0,207,255,0.3);box-shadow:var(--glow)}
-.tab-content{display:none}
-.tab-content.active{display:block}
-
-/* SECTION TITLE */
-.stitle{font-size:10px;font-weight:700;letter-spacing:2px;color:var(--muted);text-transform:uppercase;
-  margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
-
-/* VOLTAGE PHASE CARDS */
-.vphase-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px}
-.vcard{background:linear-gradient(135deg,var(--panel),var(--panel2));border:1px solid var(--border);
-  border-radius:13px;padding:18px;text-align:center;position:relative;overflow:hidden}
-.vcard::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px}
-.vcard.r::after{background:linear-gradient(90deg,var(--accent),transparent)}
-.vcard.s::after{background:linear-gradient(90deg,var(--accent2),transparent)}
-.vcard.t::after{background:linear-gradient(90deg,var(--accent3),transparent)}
-.vcard-phase{font-size:10px;letter-spacing:2px;color:var(--muted);margin-bottom:8px;font-weight:700}
-.vcard-val{font-family:var(--mono);font-size:38px;line-height:1;margin-bottom:3px}
-.vcard.r .vcard-val{color:var(--accent)}
-.vcard.s .vcard-val{color:var(--accent2)}
-.vcard.t .vcard-val{color:var(--accent3)}
-.vcard-unit{font-size:11px;color:var(--muted);font-family:var(--mono)}
-.vcard-sub{font-size:10px;color:var(--muted);margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-family:var(--mono)}
-
-/* CURRENT BARS */
-.curr-wrap{background:var(--panel);border:1px solid var(--border);border-radius:13px;padding:18px;margin-bottom:12px}
-.curr-item{display:flex;align-items:center;gap:12px;margin-bottom:12px}
-.curr-item:last-child{margin-bottom:0}
-.curr-lbl{font-size:11px;font-weight:700;color:var(--muted);width:38px;flex-shrink:0;font-family:var(--mono)}
-.curr-track{flex:1;height:7px;background:rgba(255,255,255,0.04);border-radius:4px;overflow:hidden}
-.curr-fill{height:100%;border-radius:4px;transition:width 0.7s ease;min-width:2px}
-.curr-fill.r{background:linear-gradient(90deg,var(--accent),rgba(0,207,255,0.4))}
-.curr-fill.s{background:linear-gradient(90deg,var(--accent2),rgba(0,255,153,0.4))}
-.curr-fill.t{background:linear-gradient(90deg,var(--accent3),rgba(255,152,0,0.4))}
-.curr-fill.avg{background:linear-gradient(90deg,#888,#444)}
-.curr-val{font-family:var(--mono);font-size:13px;color:var(--text);width:68px;text-align:right;flex-shrink:0}
-
-/* POWER SUMMARY */
-.power-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
-.power-big{background:linear-gradient(135deg,var(--panel),var(--panel2));border:1px solid var(--border);
-  border-radius:13px;padding:20px}
-.power-big-lbl{font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:10px;font-weight:700}
-.power-big-val{font-family:var(--mono);font-size:46px;line-height:1}
-.power-big-val.blue{color:var(--accent)}
-.power-big-val.green{color:var(--accent2)}
-.power-big-unit{font-size:13px;color:var(--muted);font-family:var(--mono);margin-top:3px}
-.power-sub-row{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
-.power-sub{flex:1;background:rgba(0,0,0,0.2);border-radius:8px;padding:9px;min-width:90px}
-.power-sub-lbl{font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
-.power-sub-val{font-family:var(--mono);font-size:15px;color:var(--text);margin-top:4px}
-
-/* GENERIC METRIC CARD */
-.mcard{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px;
-  position:relative;overflow:hidden;transition:border-color 0.3s}
-.mcard::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
-  background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:0;transition:opacity 0.3s}
-.mcard:hover{border-color:rgba(0,207,255,0.2)}
-.mcard:hover::before{opacity:1}
-.mcard.green::before{background:linear-gradient(90deg,transparent,var(--accent2),transparent)}
-.mcard.orange::before{background:linear-gradient(90deg,transparent,var(--accent3),transparent)}
-.mcard-lbl{font-size:9px;font-weight:700;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:7px}
-.mcard-val{font-family:var(--mono);font-size:24px;color:var(--accent);line-height:1;margin-bottom:3px}
-.mcard-val.green{color:var(--accent2)}
-.mcard-val.orange{color:var(--accent3)}
-.mcard-val.sm{font-size:18px}
-.mcard-unit{font-size:10px;color:var(--muted);font-family:var(--mono)}
-
-/* GRIDS */
-.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px}
-.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px}
-.g2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:12px}
-
-/* CHART CARD */
-.chart-card{background:var(--panel);border:1px solid var(--border);border-radius:13px;padding:18px;margin-bottom:12px}
-.chart-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px}
-.chart-title{font-size:12px;font-weight:700;color:var(--text);letter-spacing:0.5px}
-.chart-wrap{height:190px;position:relative}
-
-/* DATE NAV */
-.date-nav{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap}
-.dnbtn{background:var(--panel2);border:1px solid var(--border);color:var(--accent);
-  padding:7px 11px;border-radius:8px;cursor:pointer;font-size:13px;transition:all 0.2s}
-.dnbtn:hover{border-color:rgba(0,207,255,0.3);background:rgba(0,207,255,0.05)}
-.date-input{background:var(--panel2);color:var(--accent);border-radius:8px;padding:7px 11px;
-  border:1px solid var(--border);font-size:12px;font-family:var(--mono)}
-.today-btn{padding:7px 13px;border-radius:8px;border:1px solid rgba(0,207,255,0.2);
-  background:rgba(0,207,255,0.08);color:var(--accent);font-size:11px;font-weight:700;cursor:pointer}
-.clear-btn{padding:7px 13px;border-radius:8px;border:1px solid var(--border);
-  background:transparent;color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;transition:all 0.2s}
-.clear-btn:hover{border-color:rgba(255,68,102,0.3);color:var(--danger)}
-
-/* HISTORY */
-.select-input{background:var(--panel2);color:var(--accent);border-radius:8px;padding:7px 12px;
-  border:1px solid var(--border);font-size:12px;font-family:var(--sans);width:100%;margin-bottom:10px}
-.hcount{font-size:11px;color:var(--muted);margin-bottom:8px}
-.hlist{max-height:430px;overflow-y:auto}
-.hlist::-webkit-scrollbar{width:4px}
-.hlist::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
-.hitem{display:flex;align-items:center;gap:10px;padding:10px 13px;
-  background:rgba(255,255,255,0.015);border-radius:8px;margin-bottom:6px;
-  border:1px solid transparent;transition:border-color 0.2s}
-.hitem:hover{border-color:var(--border)}
-.hitem-icon{font-size:17px;flex-shrink:0;width:24px;text-align:center}
-.hitem-main{flex:1}
-.hitem-title{font-size:12px;font-weight:600;color:var(--text)}
-.hitem-title.connected{color:var(--accent2)}
-.hitem-title.disconnected{color:var(--danger)}
-.hitem-title.info{color:var(--accent)}
-.hitem-sub{font-size:10px;color:var(--muted);margin-top:1px;font-family:var(--mono)}
-.hitem-time{font-family:var(--mono);font-size:10px;color:var(--muted);flex-shrink:0}
-.no-data{text-align:center;color:var(--muted);padding:36px;font-size:12px}
-.storage-info{font-size:10px;color:var(--muted);text-align:center;padding:8px;
-  background:rgba(255,255,255,0.02);border-radius:8px;margin-top:10px}
-.ctrl-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px}
-
-/* RESPONSIVE */
-@media(max-width:1024px){.g4{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:768px){
-  .vphase-grid,.power-grid,.g3{grid-template-columns:1fr 1fr}
-  .g4{grid-template-columns:repeat(2,1fr)}
-  .vcard-val{font-size:28px}
-  .power-big-val{font-size:34px}
+/* ── Topbar ── */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;height:48px;
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:100;
 }
-@media(max-width:480px){
-  .vphase-grid,.power-grid,.g3,.g4,.g2{grid-template-columns:1fr 1fr}
-  header{flex-direction:column;text-align:center}
-  .header-right{text-align:center}
-  .tabs{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px}
-  .tab{flex-shrink:0}
-  .rs485-badge{margin-left:0}
+.brand{font-size:11px;font-weight:700;letter-spacing:.2em;color:var(--text);display:flex;align-items:center;gap:10px}
+.brand-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green)}
+.brand-dot.off{background:#555;box-shadow:none}
+.topinfo{display:flex;gap:20px;align-items:center}
+.topclk{font-size:13px;font-weight:700;color:var(--text2);letter-spacing:.05em}
+.status-pill{
+  display:flex;align-items:center;gap:6px;
+  padding:4px 10px;border-radius:2px;
+  font-size:9px;font-weight:700;letter-spacing:.15em;
+  background:var(--bg3);border:1px solid var(--border);
+  color:var(--text3);
 }
+.status-pill .dot{width:6px;height:6px;border-radius:50%;background:#444}
+.status-pill.ok .dot{background:var(--green);box-shadow:0 0 4px var(--green)}
+.status-pill.ok{border-color:var(--green2);color:var(--green)}
+.status-pill.warn .dot{background:var(--yellow)}
+.status-pill.warn{border-color:#5a4a00;color:var(--yellow)}
+.status-pill.err .dot{background:var(--red)}
+.status-pill.err{border-color:var(--red2);color:var(--red)}
+#ip-config{
+  padding:4px 10px;border:1px solid var(--border2);background:var(--bg3);
+  color:var(--text2);font-size:10px;border-radius:2px;font-family:inherit;
+  cursor:pointer;outline:none;
+}
+#ip-config:focus{border-color:var(--accent)}
+
+/* ── Layout ── */
+.layout{display:grid;grid-template-columns:188px 1fr;min-height:calc(100vh - 48px)}
+.sidebar{
+  background:var(--bg2);border-right:1px solid var(--border);
+  padding:12px 0;position:sticky;top:48px;
+  height:calc(100vh - 48px);overflow-y:auto;
+}
+.nsec{
+  padding:12px 16px 4px;font-size:8px;font-weight:700;
+  letter-spacing:.22em;color:var(--text3);
+}
+.nitem{
+  display:flex;align-items:center;gap:9px;
+  padding:9px 16px;cursor:pointer;font-size:11px;
+  color:var(--text3);border-left:2px solid transparent;
+  transition:all .12s;letter-spacing:.03em;
+}
+.nitem:hover{color:var(--text2);background:rgba(255,255,255,.03)}
+.nitem.on{color:var(--text);border-left-color:var(--accent);background:rgba(76,175,80,.06)}
+.nitem .ico{font-size:13px;width:16px;text-align:center}
+
+/* ── Main ── */
+.main{padding:28px 32px;overflow-y:auto}
+.pg{display:none}.pg.on{display:block}
+.ptitle{font-size:22px;font-weight:700;letter-spacing:-.01em;margin-bottom:3px}
+.psub{font-size:10px;color:var(--text3);letter-spacing:.08em;margin-bottom:24px}
+
+/* ── Stats grid ── */
+.sgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+.scard{
+  background:var(--bg2);border:1px solid var(--border);
+  padding:16px;border-radius:2px;
+  position:relative;overflow:hidden;
+}
+.scard::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:var(--accent);opacity:0;transition:.2s;
+}
+.scard:hover::before{opacity:1}
+.slabel{font-size:8px;font-weight:700;letter-spacing:.18em;color:var(--text3);margin-bottom:8px}
+.sval{font-size:28px;font-weight:700;color:var(--text)}
+.sval.g{color:var(--green)}.sval.r{color:var(--red)}.sval.b{color:#42a5f5}
+
+/* ── Card ── */
+.card{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:2px;margin-bottom:16px;
+}
+.ch{
+  padding:11px 16px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.ct{font-size:9px;font-weight:700;letter-spacing:.18em;color:var(--text3)}
+.cb{padding:16px}
+
+/* ── Table ── */
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{
+  text-align:left;padding:8px 12px;
+  background:var(--bg3);border-bottom:1px solid var(--border);
+  font-size:8px;font-weight:700;letter-spacing:.15em;color:var(--text3);
+}
+td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+.emp-cell{text-align:center;padding:32px;color:var(--text3);font-size:11px;letter-spacing:.05em}
+
+/* ── Badges ── */
+.badge{
+  display:inline-block;padding:2px 7px;border-radius:2px;
+  font-size:8px;font-weight:700;letter-spacing:.1em;
+  font-family:'IBM Plex Mono',monospace;
+}
+.bg{background:rgba(76,175,80,.15);color:#66bb6a;border:1px solid rgba(76,175,80,.3)}
+.br{background:rgba(229,57,53,.15);color:#ef5350;border:1px solid rgba(229,57,53,.3)}
+.by{background:rgba(249,168,37,.15);color:#ffca28;border:1px solid rgba(249,168,37,.3)}
+.bb{background:rgba(66,165,245,.15);color:#64b5f6;border:1px solid rgba(66,165,245,.3)}
+.bgr{background:rgba(255,255,255,.06);color:var(--text3);border:1px solid var(--border)}
+.bor{background:rgba(230,81,0,.15);color:#ff7043;border:1px solid rgba(230,81,0,.3)}
+
+/* ── Buttons ── */
+.btn{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:7px 14px;border:none;border-radius:2px;
+  font-size:10px;font-weight:700;letter-spacing:.1em;
+  cursor:pointer;transition:all .12s;
+  font-family:'IBM Plex Mono',monospace;
+}
+.bp{background:var(--text);color:var(--bg)}.bp:hover{background:#ccc}
+.bg2{background:var(--green2);color:#fff;border:1px solid rgba(76,175,80,.4)}.bg2:hover{background:#2a5224}
+.br2{background:var(--red2);color:#fff;border:1px solid rgba(229,57,53,.4)}.br2:hover{background:#6a1919}
+.bo{
+  background:transparent;border:1px solid var(--border2);
+  color:var(--text2);
+}.bo:hover{background:var(--bg3);color:var(--text)}
+.bsm{padding:4px 9px;font-size:9px}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+
+/* ── Form ── */
+.frow{display:grid;gap:12px;margin-bottom:12px}
+.c2{grid-template-columns:1fr 1fr}.c3{grid-template-columns:1fr 1fr 1fr}.c4{grid-template-columns:1fr 1fr 1fr 1fr}
+.fg label{display:block;font-size:8px;font-weight:700;letter-spacing:.15em;color:var(--text3);margin-bottom:4px}
+.fg input,.fg select{
+  width:100%;padding:8px 10px;
+  background:var(--bg3);border:1px solid var(--border2);
+  color:var(--text);border-radius:2px;font-size:11px;
+  font-family:'IBM Plex Mono',monospace;outline:none;
+}
+.fg input:focus,.fg select:focus{border-color:var(--accent)}
+.fg input[readonly]{background:var(--bg);color:var(--text3)}
+.fg input[type=checkbox]{width:auto;accent-color:var(--accent)}
+.izin-row{display:flex;align-items:center;gap:10px;padding:6px 0}
+
+/* ── Enroll box ── */
+.ebox{
+  border:1px dashed var(--border2);border-radius:2px;
+  padding:40px 24px;text-align:center;
+  background:var(--bg3);
+}
+.ebox.wait{border-color:var(--yellow);border-style:solid;animation:pulse 1.2s infinite}
+.ebox.ok{border-color:var(--green);border-style:solid}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.eicon{font-size:40px;margin-bottom:12px;color:var(--text2)}
+.etitle{font-size:14px;font-weight:700;margin-bottom:6px}
+.esub{font-size:11px;color:var(--text3);line-height:1.6}
+
+/* ── Modal ── */
+.moverlay{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.7);z-index:200;
+  align-items:center;justify-content:center;
+  backdrop-filter:blur(2px);
+}
+.moverlay.open{display:flex}
+.modal{
+  background:var(--bg2);border:1px solid var(--border2);
+  width:540px;max-width:95vw;border-radius:2px;
+}
+.mh{
+  padding:14px 18px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.mt{font-size:10px;font-weight:700;letter-spacing:.15em;color:var(--text2)}
+.mx{background:none;border:none;font-size:16px;cursor:pointer;color:var(--text3);padding:0 3px}
+.mx:hover{color:var(--text)}
+.mb{padding:18px}
+.mf{padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+.msep{border:none;border-top:1px dashed var(--border);margin:12px 0}
+.mlabel{font-size:8px;font-weight:700;letter-spacing:.18em;color:var(--text3);margin-bottom:8px}
+
+/* ── Toast ── */
+#toast{
+  position:fixed;bottom:20px;right:20px;z-index:999;
+  background:var(--bg3);color:var(--text);
+  padding:10px 16px;border-radius:2px;
+  font-size:10px;font-family:'IBM Plex Mono',monospace;font-weight:700;
+  border:1px solid var(--border2);letter-spacing:.05em;
+  transform:translateY(60px);opacity:0;transition:all .25s;pointer-events:none;
+}
+#toast.show{transform:translateY(0);opacity:1}
+#toast.tg{border-color:var(--green2);color:var(--green)}
+#toast.tr{border-color:var(--red2);color:var(--red)}
+
+/* ── Misc ── */
+.flex{display:flex}.gap8{gap:8px}.gap16{gap:16px}.aic{align-items:center}
+.mt16{margin-top:16px}.mt24{margin-top:24px}
+.conn-bar{
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:2px;padding:12px 16px;margin-bottom:20px;
+  display:flex;align-items:center;justify-content:space-between;
+  font-size:10px;
+}
+.conn-bar .lbl{color:var(--text3);letter-spacing:.05em}
+.conn-bar .val{font-weight:700;color:var(--text2);font-family:monospace}
+.live-ind{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:9px;color:var(--text3);letter-spacing:.08em;
+}
+.live-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+
+.warn-banner{
+  background:rgba(249,168,37,.08);border:1px solid rgba(249,168,37,.25);
+  border-radius:2px;padding:10px 14px;margin-bottom:16px;
+  font-size:11px;color:var(--yellow);line-height:1.6;
+  display:none;
+}
+.warn-banner.show{display:block}
+
+@media(max-width:700px){
+  .layout{grid-template-columns:1fr}.sidebar{display:none}
+  .sgrid{grid-template-columns:1fr 1fr}
+  .c4{grid-template-columns:1fr 1fr}.c3{grid-template-columns:1fr}
+}
+
+/* ── Font import (optional, fallback to monospace) ── */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&display=swap');
 </style>
 </head>
 <body>
-<div class="wrap">
 
-<!-- HEADER -->
-<header>
-  <div class="logo">
-    <div class="logo-icon">&#9889;</div>
-    <div>
-      <h1>ATTA<span>MATION</span></h1>
-      <div class="logo-sub">POWER METER MONITOR</div>
-    </div>
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="brand">
+    <span class="brand-dot" id="live-dot"></span>
+    ATTAMATION · FINGERPRINT ATTENDANCE
   </div>
-  <div class="header-right">
-    <div class="clock" id="clock">--:--:--</div>
-    <div class="hdate" id="hdate">--</div>
+  <div class="topinfo">
+    <input id="ip-config" value="192.168.x.x" title="IP Address ESP32 — klik untuk ubah" onchange="setEspIP(this.value)" onkeydown="if(event.key==='Enter')setEspIP(this.value)">
+    <div class="status-pill" id="pill-wifi"><span class="dot"></span><span id="pill-wifi-lbl">WiFi</span></div>
+    <div class="status-pill" id="pill-mqtt"><span class="dot"></span><span id="pill-mqtt-lbl">MQTT</span></div>
+    <span class="topclk" id="clk">--:--:--</span>
+    <span class="live-ind"><span class="live-dot"></span>LIVE</span>
   </div>
-</header>
-
-<!-- STATUS BAR -->
-<div class="statusbar">
-  <div class="sdot" id="sdot"></div>
-  <span id="statusText">Menghubungkan ke MQTT...</span>
-  <div class="rs485-badge err" id="rs485badge">RS485: --</div>
 </div>
 
-<!-- TABS -->
-<div class="tabs">
-  <div class="tab active" data-tab="dashboard">&#9889; Dashboard</div>
-  <div class="tab" data-tab="detail">&#128203; Detail</div>
-  <div class="tab" data-tab="trends">&#128200; Trends</div>
-  <div class="tab" data-tab="history">&#128220; History</div>
+<div class="layout">
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div style="padding:12px 16px 6px;font-size:9px;color:var(--text3);letter-spacing:.1em">PANEL KONTROL</div>
+  <div class="nsec">DASHBOARD</div>
+  <div class="nitem on" onclick="go('dash',this)"><span class="ico">◈</span> Overview</div>
+  <div class="nsec">KARYAWAN</div>
+  <div class="nitem" onclick="go('emp',this)"><span class="ico">◉</span> Daftar Karyawan</div>
+  <div class="nitem" onclick="go('enroll',this)"><span class="ico">⊕</span> Enroll Jari</div>
+  <div class="nsec">LAPORAN</div>
+  <div class="nitem" onclick="go('logs',this)"><span class="ico">◎</span> Log Absensi</div>
+  <div class="nitem" onclick="go('emerg',this)"><span class="ico">⚠</span> Log Tidak Sesuai</div>
+  <div class="nitem" onclick="go('allact',this)"><span class="ico">≡</span> All Activity</div>
+  <div class="nsec">SISTEM</div>
+  <div class="nitem" onclick="go('settings',this)"><span class="ico">⚙</span> Pengaturan</div>
+  <div class="nitem" style="color:var(--red)" onclick="confirmResetFingers()"><span class="ico">✕</span> Reset Semua Jari</div>
+</nav>
+
+<main class="main">
+
+<!-- ── BANNER: ESP32 tidak terhubung ── -->
+<div class="warn-banner" id="warn-noconn">
+  ⚠ Tidak dapat terhubung ke ESP32 di <strong id="warn-ip">—</strong>.
+  Pastikan ESP32 menyala dan berada di jaringan yang sama, atau ubah IP di kolom atas kanan.
 </div>
 
-<!-- ===== DASHBOARD ===== -->
-<div class="tab-content active" id="tab-dashboard">
-
-  <div class="stitle">Tegangan Fase - Netral (L-N)</div>
-  <div class="vphase-grid">
-    <div class="vcard r">
-      <div class="vcard-phase">FASE R</div>
-      <div class="vcard-val" id="d_VRN">---</div>
-      <div class="vcard-unit">Volt</div>
-      <div class="vcard-sub">L-L R-S: <span id="d_VRS_s">---</span> V</div>
+<!-- ── DASHBOARD ── -->
+<div class="pg on" id="pg-dash">
+  <div class="ptitle">Overview</div>
+  <div class="psub">STATUS SISTEM ABSENSI REALTIME</div>
+  <div class="sgrid">
+    <div class="scard"><div class="slabel">TOTAL KARYAWAN</div><div class="sval b" id="s-tot">—</div></div>
+    <div class="scard"><div class="slabel">AKTIF</div><div class="sval g" id="s-act">—</div></div>
+    <div class="scard"><div class="slabel">NONAKTIF</div><div class="sval r" id="s-inact">—</div></div>
+    <div class="scard"><div class="slabel">LOG HARI INI</div><div class="sval" id="s-today">—</div></div>
+  </div>
+  <div class="card">
+    <div class="ch">
+      <span class="ct">LOG TERBARU</span>
+      <span class="live-ind"><span class="live-dot"></span>AUTO REFRESH</span>
     </div>
-    <div class="vcard s">
-      <div class="vcard-phase">FASE S</div>
-      <div class="vcard-val" id="d_VSN">---</div>
-      <div class="vcard-unit">Volt</div>
-      <div class="vcard-sub">L-L S-T: <span id="d_VST_s">---</span> V</div>
-    </div>
-    <div class="vcard t">
-      <div class="vcard-phase">FASE T</div>
-      <div class="vcard-val" id="d_VTN">---</div>
-      <div class="vcard-unit">Volt</div>
-      <div class="vcard-sub">L-L R-T: <span id="d_VRT_s">---</span> V</div>
+    <div style="padding:0">
+      <table><thead><tr><th>WAKTU</th><th>NAMA</th><th>AKTIVITAS</th><th>STATUS</th></tr></thead>
+      <tbody id="dash-log"><tr><td colspan="4" class="emp-cell">Menghubungkan...</td></tr></tbody></table>
     </div>
   </div>
+</div>
 
-  <div class="stitle">Arus (Current)</div>
-  <div class="curr-wrap">
-    <div class="curr-item">
-      <div class="curr-lbl">I-R</div>
-      <div class="curr-track"><div class="curr-fill r" id="bar_IR" style="width:0%"></div></div>
-      <div class="curr-val"><span id="d_IR">---</span> A</div>
-    </div>
-    <div class="curr-item">
-      <div class="curr-lbl">I-S</div>
-      <div class="curr-track"><div class="curr-fill s" id="bar_IS" style="width:0%"></div></div>
-      <div class="curr-val"><span id="d_IS">---</span> A</div>
-    </div>
-    <div class="curr-item">
-      <div class="curr-lbl">I-T</div>
-      <div class="curr-track"><div class="curr-fill t" id="bar_IT" style="width:0%"></div></div>
-      <div class="curr-val"><span id="d_IT">---</span> A</div>
-    </div>
-    <div class="curr-item">
-      <div class="curr-lbl">I-AVG</div>
-      <div class="curr-track"><div class="curr-fill avg" id="bar_IAVG" style="width:0%"></div></div>
-      <div class="curr-val"><span id="d_IAVG">---</span> A</div>
+<!-- ── KARYAWAN ── -->
+<div class="pg" id="pg-emp">
+  <div class="ptitle">Daftar Karyawan</div>
+  <div class="psub">KELOLA DATA, JADWAL, IZIN, DAN STATUS</div>
+  <div class="card">
+    <div class="ch"><span class="ct">DATA KARYAWAN</span></div>
+    <div style="padding:0;overflow-x:auto">
+      <table><thead><tr>
+        <th>ID</th><th>NAMA</th><th>MASUK</th><th>PULANG</th>
+        <th>ISTIRAHAT</th><th>IZIN TUGAS</th><th>IZIN TINGGAL</th>
+        <th>STATUS</th><th>AKSI</th>
+      </tr></thead>
+      <tbody id="emp-tb"><tr><td colspan="9" class="emp-cell">Menghubungkan...</td></tr></tbody></table>
     </div>
   </div>
+</div>
 
-  <div class="stitle">Daya</div>
-  <div class="power-grid">
-    <div class="power-big">
-      <div class="power-big-lbl">Active Power Total</div>
-      <div class="power-big-val blue" id="d_TAP">---</div>
-      <div class="power-big-unit">kW</div>
-      <div class="power-sub-row">
-        <div class="power-sub">
-          <div class="power-sub-lbl">Reactive Power</div>
-          <div class="power-sub-val"><span id="d_TRP">---</span> kVAr</div>
-        </div>
-        <div class="power-sub">
-          <div class="power-sub-lbl">Power Factor</div>
-          <div class="power-sub-val" id="d_TPF">---</div>
-        </div>
-        <div class="power-sub">
-          <div class="power-sub-lbl">Frequency</div>
-          <div class="power-sub-val"><span id="d_HZ">---</span> Hz</div>
-        </div>
+<!-- ── ENROLL ── -->
+<div class="pg" id="pg-enroll">
+  <div class="ptitle">Enroll Jari</div>
+  <div class="psub">DAFTARKAN SIDIK JARI BARU</div>
+  <div class="card">
+    <div class="ch"><span class="ct">PROSES ENROLL</span></div>
+    <div class="cb">
+      <div class="ebox" id="ebox">
+        <div class="eicon">◈</div>
+        <div class="etitle">Siap Mendaftarkan Jari</div>
+        <div class="esub">Klik tombol di bawah lalu ikuti instruksi di layar OLED Arduino.</div>
+        <div style="margin-top:20px"><button class="btn bp" onclick="startEnroll()">MULAI ENROLL</button></div>
       </div>
-    </div>
-    <div class="power-big" style="border-color:rgba(0,255,153,0.12)">
-      <div class="power-big-lbl">Active Energy (+)</div>
-      <div class="power-big-val green" id="d_PAE">---</div>
-      <div class="power-big-unit">kWh</div>
-      <div class="power-sub-row">
-        <div class="power-sub">
-          <div class="power-sub-lbl">Active Energy (-)</div>
-          <div class="power-sub-val"><span id="d_NAE">---</span> kWh</div>
+      <div id="eresult" style="display:none;margin-top:18px">
+        <div class="ct" style="margin-bottom:12px;color:var(--text2)">DATA KARYAWAN BARU</div>
+        <div class="frow c2">
+          <div class="fg"><label>ID FINGERPRINT</label><input id="nid" readonly></div>
+          <div class="fg"><label>NAMA KARYAWAN</label><input id="nname" placeholder="Masukkan nama..."></div>
         </div>
-        <div class="power-sub">
-          <div class="power-sub-lbl">React. Energy (+)</div>
-          <div class="power-sub-val"><span id="d_PRE">---</span> kVArh</div>
+        <div class="frow c4">
+          <div class="fg"><label>JAM MASUK</label><input type="time" id="nin" value="08:00"></div>
+          <div class="fg"><label>JAM PULANG</label><input type="time" id="nout" value="16:00"></div>
+          <div class="fg"><label>MULAI ISTIRAHAT</label><input type="time" id="nbrin" value="12:00"></div>
+          <div class="fg"><label>SELESAI ISTIRAHAT</label><input type="time" id="nbrout" value="13:00"></div>
         </div>
-        <div class="power-sub">
-          <div class="power-sub-lbl">React. Energy (-)</div>
-          <div class="power-sub-val"><span id="d_NRE">---</span> kVArh</div>
+        <div class="flex gap8 mt16">
+          <button class="btn bg2" onclick="saveNewEmp()">SIMPAN KARYAWAN</button>
+          <button class="btn bo" onclick="resetEnroll()">BATAL</button>
         </div>
       </div>
     </div>
   </div>
-
 </div>
 
-<!-- ===== DETAIL ===== -->
-<div class="tab-content" id="tab-detail">
-
-  <div class="stitle">Tegangan Fase - Fase (L-L)</div>
-  <div class="g3">
-    <div class="mcard">
-      <div class="mcard-lbl">V R-S (Line-Line)</div>
-      <div class="mcard-val" id="dt_VRS">---</div>
-      <div class="mcard-unit">Volt</div>
-    </div>
-    <div class="mcard">
-      <div class="mcard-lbl">V S-T (Line-Line)</div>
-      <div class="mcard-val" id="dt_VST">---</div>
-      <div class="mcard-unit">Volt</div>
-    </div>
-    <div class="mcard">
-      <div class="mcard-lbl">V R-T (Line-Line)</div>
-      <div class="mcard-val" id="dt_VRT">---</div>
-      <div class="mcard-unit">Volt</div>
+<!-- ── LOG ABSENSI ── -->
+<div class="pg" id="pg-logs">
+  <div class="ptitle">Log Absensi</div>
+  <div class="psub">RIWAYAT ABSENSI SEMUA KARYAWAN</div>
+  <div class="card">
+    <div class="ch"><span class="ct">RIWAYAT</span></div>
+    <div style="padding:0;overflow-x:auto">
+      <table><thead><tr><th>WAKTU</th><th>NAMA</th><th>ID</th><th>AKTIVITAS</th><th>STATUS</th></tr></thead>
+      <tbody id="log-tb"><tr><td colspan="5" class="emp-cell">Belum ada data</td></tr></tbody></table>
     </div>
   </div>
-
-  <div class="stitle">Tegangan Fase - Netral (L-N) Detail</div>
-  <div class="g3">
-    <div class="mcard">
-      <div class="mcard-lbl">V R-N</div>
-      <div class="mcard-val" id="dt_VRN">---</div>
-      <div class="mcard-unit">Volt</div>
-    </div>
-    <div class="mcard">
-      <div class="mcard-lbl">V S-N</div>
-      <div class="mcard-val" id="dt_VSN">---</div>
-      <div class="mcard-unit">Volt</div>
-    </div>
-    <div class="mcard">
-      <div class="mcard-lbl">V T-N</div>
-      <div class="mcard-val" id="dt_VTN">---</div>
-      <div class="mcard-unit">Volt</div>
-    </div>
-  </div>
-
-  <div class="stitle">Arus Detail</div>
-  <div class="g4">
-    <div class="mcard">
-      <div class="mcard-lbl">I Fase R</div>
-      <div class="mcard-val" id="dt_IR">---</div>
-      <div class="mcard-unit">Ampere</div>
-    </div>
-    <div class="mcard">
-      <div class="mcard-lbl">I Fase S</div>
-      <div class="mcard-val" id="dt_IS">---</div>
-      <div class="mcard-unit">Ampere</div>
-    </div>
-    <div class="mcard">
-      <div class="mcard-lbl">I Fase T</div>
-      <div class="mcard-val" id="dt_IT">---</div>
-      <div class="mcard-unit">Ampere</div>
-    </div>
-    <div class="mcard">
-      <div class="mcard-lbl">I Average</div>
-      <div class="mcard-val" id="dt_IAVG">---</div>
-      <div class="mcard-unit">Ampere</div>
-    </div>
-  </div>
-
-  <div class="stitle">Daya &amp; Energi Detail</div>
-  <div class="g4">
-    <div class="mcard green">
-      <div class="mcard-lbl">Active Power Total</div>
-      <div class="mcard-val green" id="dt_TAP">---</div>
-      <div class="mcard-unit">kW</div>
-    </div>
-    <div class="mcard orange">
-      <div class="mcard-lbl">Reactive Power Total</div>
-      <div class="mcard-val orange" id="dt_TRP">---</div>
-      <div class="mcard-unit">kVAr</div>
-    </div>
-    <div class="mcard">
-      <div class="mcard-lbl">Power Factor (Cos Phi)</div>
-      <div class="mcard-val" id="dt_TPF">---</div>
-      <div class="mcard-unit">PF</div>
-    </div>
-    <div class="mcard">
-      <div class="mcard-lbl">Frequency</div>
-      <div class="mcard-val" id="dt_HZ">---</div>
-      <div class="mcard-unit">Hz</div>
-    </div>
-    <div class="mcard green">
-      <div class="mcard-lbl">Active Energy (+)</div>
-      <div class="mcard-val green sm" id="dt_PAE">---</div>
-      <div class="mcard-unit">kWh</div>
-    </div>
-    <div class="mcard">
-      <div class="mcard-lbl">Active Energy (-)</div>
-      <div class="mcard-val sm" id="dt_NAE">---</div>
-      <div class="mcard-unit">kWh</div>
-    </div>
-    <div class="mcard green">
-      <div class="mcard-lbl">Reactive Energy (+)</div>
-      <div class="mcard-val green sm" id="dt_PRE">---</div>
-      <div class="mcard-unit">kVArh</div>
-    </div>
-    <div class="mcard">
-      <div class="mcard-lbl">Reactive Energy (-)</div>
-      <div class="mcard-val sm" id="dt_NRE">---</div>
-      <div class="mcard-unit">kVArh</div>
-    </div>
-  </div>
-
 </div>
 
-<!-- ===== TRENDS ===== -->
-<div class="tab-content" id="tab-trends">
-  <div class="ctrl-hdr">
-    <div class="stitle" style="margin:0;border:none;padding:0">Trend Monitoring</div>
-    <button class="clear-btn" id="clearTrends">Clear All</button>
+<!-- ── LOG MASALAH ── -->
+<div class="pg" id="pg-emerg">
+  <div class="ptitle">Log Tidak Sesuai</div>
+  <div class="psub">ABSENSI DARURAT, TERLAMBAT, DAN JADWAL TIDAK SESUAI</div>
+  <div class="card">
+    <div class="ch"><span class="ct">LOG MASALAH</span></div>
+    <div style="padding:0;overflow-x:auto">
+      <table><thead><tr><th>WAKTU</th><th>NAMA</th><th>ID</th><th>AKTIVITAS</th><th>STATUS</th><th>KET</th></tr></thead>
+      <tbody id="emerg-tb"><tr><td colspan="6" class="emp-cell">Tidak ada log masalah</td></tr></tbody></table>
+    </div>
   </div>
-  <div class="date-nav">
-    <button class="dnbtn" id="trendPrev">&#9664;</button>
-    <input type="date" id="trendDate" class="date-input">
-    <button class="dnbtn" id="trendNext">&#9654;</button>
-    <button class="today-btn" id="trendToday">Today</button>
-  </div>
-
-  <div class="chart-card">
-    <div class="chart-hdr"><div class="chart-title">Tegangan L-N (V) &mdash; R / S / T</div></div>
-    <div class="chart-wrap"><canvas id="cVLN"></canvas></div>
-  </div>
-  <div class="chart-card">
-    <div class="chart-hdr"><div class="chart-title">Tegangan L-L (V) &mdash; R-S / S-T / R-T</div></div>
-    <div class="chart-wrap"><canvas id="cVLL"></canvas></div>
-  </div>
-  <div class="chart-card">
-    <div class="chart-hdr"><div class="chart-title">Arus (A) &mdash; R / S / T / AVG</div></div>
-    <div class="chart-wrap"><canvas id="cI"></canvas></div>
-  </div>
-  <div class="chart-card">
-    <div class="chart-hdr"><div class="chart-title">Active Power Total (kW)</div></div>
-    <div class="chart-wrap"><canvas id="cPow"></canvas></div>
-  </div>
-  <div class="chart-card">
-    <div class="chart-hdr"><div class="chart-title">Power Factor &amp; Frequency (Hz)</div></div>
-    <div class="chart-wrap"><canvas id="cPF"></canvas></div>
-  </div>
-  <div class="chart-card">
-    <div class="chart-hdr"><div class="chart-title">Active Energy kWh (+/-)</div></div>
-    <div class="chart-wrap"><canvas id="cEnergy"></canvas></div>
-  </div>
-  <div class="storage-info" id="trendInfo">Storage: 0 data points</div>
 </div>
 
-<!-- ===== HISTORY ===== -->
-<div class="tab-content" id="tab-history">
-  <div class="ctrl-hdr">
-    <div class="stitle" style="margin:0;border:none;padding:0">System History</div>
-    <button class="clear-btn" id="clearHistory">Clear All</button>
+<!-- ── ALL ACTIVITY ── -->
+<div class="pg" id="pg-allact">
+  <div class="ptitle">All Activity</div>
+  <div class="psub">SEMUA AKTIVITAS SENSOR — TERMASUK YANG DIBLOKIR</div>
+  <div class="card">
+    <div class="ch">
+      <span class="ct">RAW ACTIVITY LOG</span>
+      <span style="font-size:9px;color:var(--text3);letter-spacing:.05em">MAX 300 ENTRI TERBARU</span>
+    </div>
+    <div style="padding:0;overflow-x:auto">
+      <table><thead><tr><th>WAKTU</th><th>NAMA</th><th>ID</th><th>MENU</th><th>HASIL</th></tr></thead>
+      <tbody id="allact-tb"><tr><td colspan="5" class="emp-cell">Belum ada aktivitas</td></tr></tbody></table>
+    </div>
   </div>
-  <div class="date-nav">
-    <button class="dnbtn" id="histPrev">&#9664;</button>
-    <input type="date" id="histDate" class="date-input">
-    <button class="dnbtn" id="histNext">&#9654;</button>
-    <button class="today-btn" id="histToday">Today</button>
-  </div>
-  <select id="histFilter" class="select-input">
-    <option value="all">Semua Event</option>
-    <option value="mqtt">MQTT Status</option>
-    <option value="rs485">RS485 Status</option>
-    <option value="data">Data Snapshot</option>
-  </select>
-  <div class="hcount" id="hcount">0 event</div>
-  <div class="hlist" id="hlist"><div class="no-data">Belum ada history</div></div>
-  <div class="storage-info" id="histInfo">Storage: 0 events</div>
 </div>
 
-</div><!-- /wrap -->
+<!-- ── SETTINGS ── -->
+<div class="pg" id="pg-settings">
+  <div class="ptitle">Pengaturan</div>
+  <div class="psub">KONFIGURASI JAM DAN SISTEM</div>
+  <div class="card">
+    <div class="ch"><span class="ct">SET JAM MANUAL</span></div>
+    <div class="cb">
+      <div class="frow c3">
+        <div class="fg"><label>TANGGAL</label><input type="date" id="set-date"></div>
+        <div class="fg"><label>JAM</label><input type="time" id="set-time"></div>
+        <div class="fg" style="display:flex;align-items:flex-end">
+          <button class="btn bp" style="width:100%;justify-content:center" onclick="setTime()">SET JAM</button>
+        </div>
+      </div>
+      <div style="margin-top:8px;font-size:10px;color:var(--text3)">
+        Jam ESP32 sekarang: <strong id="cur-time" style="color:var(--text2)">--:--:--</strong>
+        &nbsp;·&nbsp; <span id="cur-date">--/--/----</span>
+      </div>
+    </div>
+  </div>
 
-<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <div class="card" style="margin-top:16px">
+    <div class="ch"><span class="ct">KONEKSI ESP32</span></div>
+    <div class="cb">
+      <div class="frow c2">
+        <div class="fg"><label>IP ADDRESS ESP32</label>
+          <input id="set-ip" placeholder="192.168.x.x">
+        </div>
+        <div class="fg" style="display:flex;align-items:flex-end">
+          <button class="btn bp" style="width:100%;justify-content:center" onclick="applyIP()">TERAPKAN IP</button>
+        </div>
+      </div>
+      <div style="font-size:10px;color:var(--text3);margin-top:6px;line-height:1.8">
+        IP tersimpan di browser lokal. Dashboard ini di-host di GitHub Pages dan berkomunikasi langsung dengan ESP32 via REST API.<br>
+        Pastikan perangkat Anda berada di jaringan yang sama dengan ESP32.
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px;border-color:rgba(229,57,53,.3)">
+    <div class="ch" style="background:rgba(229,57,53,.05)">
+      <span class="ct" style="color:var(--red)">⚠ RESET SEMUA JARI &amp; DATA KARYAWAN</span>
+    </div>
+    <div class="cb">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.7">
+        Hapus <strong>seluruh data jari</strong> dari sensor fingerprint sekaligus semua data karyawan.<br>
+        <span style="color:var(--red);font-weight:700">⚠ Tidak dapat dibatalkan. Semua karyawan harus enroll ulang.</span>
+      </div>
+      <button class="btn br2" onclick="confirmResetFingers()">✕ RESET SEMUA JARI &amp; DATA</button>
+    </div>
+  </div>
+</div>
+
+</main>
+</div><!-- end layout -->
+
+<!-- ── MODAL EDIT KARYAWAN ── -->
+<div class="moverlay" id="medit">
+  <div class="modal">
+    <div class="mh"><span class="mt">EDIT KARYAWAN</span><button class="mx" onclick="closeMod('medit')">✕</button></div>
+    <div class="mb">
+      <input type="hidden" id="eid">
+      <div class="frow c2">
+        <div class="fg"><label>ID</label><input id="eid-d" readonly></div>
+        <div class="fg"><label>NAMA</label><input id="ename"></div>
+      </div>
+      <div class="frow c2">
+        <div class="fg"><label>JAM MASUK</label><input type="time" id="ein"></div>
+        <div class="fg"><label>JAM PULANG</label><input type="time" id="eout"></div>
+      </div>
+      <div class="frow c2">
+        <div class="fg"><label>MULAI ISTIRAHAT</label><input type="time" id="ebrin"></div>
+        <div class="fg"><label>SELESAI ISTIRAHAT</label><input type="time" id="ebrout"></div>
+      </div>
+      <hr class="msep">
+      <div class="mlabel">IZIN TUGAS KELUAR (MENU 4)</div>
+      <div class="izin-row">
+        <input type="checkbox" id="eit-aktif">
+        <label for="eit-aktif" style="font-size:11px;color:var(--text2)">Aktifkan Izin Tugas</label>
+        <div class="fg" style="flex:1;margin-top:0">
+          <label>JAM BERANGKAT</label>
+          <input type="time" id="eit-jam">
+        </div>
+      </div>
+      <hr class="msep">
+      <div class="mlabel">IZIN TINGGALKAN TEMPAT (MENU 5)</div>
+      <div class="izin-row">
+        <input type="checkbox" id="etn-aktif">
+        <label for="etn-aktif" style="font-size:11px;color:var(--text2)">Aktifkan Izin Tinggal</label>
+        <div class="fg" style="flex:1;margin-top:0">
+          <label>JAM MENINGGALKAN</label>
+          <input type="time" id="etn-jam">
+        </div>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn bo" onclick="closeMod('medit')">BATAL</button>
+      <button class="btn bp" onclick="saveEdit()">SIMPAN</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- ============================================================
+     JAVASCRIPT
+============================================================ -->
 <script>
-// ============================================================
-//  KONFIGURASI MQTT
-//  Sesuaikan dengan broker Anda
-// ============================================================
-var MQTT_HOST  = "eb276bce81de4b5b95aadbfea766f882.s1.eu.hivemq.cloud";
-var MQTT_PORT  = 8884;      // HiveMQ Cloud WSS = 8884
-var MQTT_PATH  = "/mqtt";
-var MQTT_USER  = "PMP-Iot";
-var MQTT_PASS  = "Primapack123";
-var TOPIC_DATA = "power_meter/data";
+// ── Config ──────────────────────────────────────────────────
+var ESP_IP = localStorage.getItem('esp_ip') || '192.168.0.245';
+var curPage = 'dash';
+var employees = [];
+var autoRefTmr = null;
+var enrollTmr  = null;
 
-// ============================================================
-//  KONSTANTA
-// ============================================================
-var MAX_DAYS      = 14;
-var DATA_VER      = 1;
-var MAX_CURR_A    = 500;   // Arus maks untuk bar (sesuaikan)
-var TREND_SAVE_MS = 5000;  // Interval simpan trend
+function getBase(){ return 'http://'+ESP_IP; }
 
-// ============================================================
-//  STATE
-// ============================================================
-var trendData    = {};
-var eventHistory = {};
-var trendViewD   = new Date();
-var histViewD    = new Date();
-var lastTrendSave = 0;
-var prevRS485    = null;
-var lastDataLog  = 0;
+// Update IP display
+function updateIpDisplay(){
+  document.getElementById('ip-config').value = ESP_IP;
+  var si = document.getElementById('set-ip');
+  if(si) si.value = ESP_IP;
+}
+updateIpDisplay();
 
-// ============================================================
-//  UTILITY
-// ============================================================
-function pad(n){ return n < 10 ? '0'+n : ''+n; }
-
-function fmtDate(d){
-  return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+function setEspIP(v){
+  v = v.trim();
+  if(!v) return;
+  ESP_IP = v;
+  localStorage.setItem('esp_ip', v);
+  updateIpDisplay();
+  toast('IP diubah ke '+v);
+  pollStatus();
+}
+function applyIP(){
+  var v = document.getElementById('set-ip').value.trim();
+  if(v) setEspIP(v);
 }
 
-function fmtTime(d){
-  return pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());
+// ── API helper ───────────────────────────────────────────────
+async function api(path, opts){
+  try{
+    var url = getBase()+path;
+    var r = await fetch(url,{
+      ...opts,
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      mode:'cors',
+      signal: AbortSignal.timeout(6000)
+    });
+    return await r.json();
+  }catch(e){ return null; }
 }
 
-function parseDate(s){
-  var p = s.split('-');
-  return new Date(+p[0], +p[1]-1, +p[2]);
+// ── Navigation ───────────────────────────────────────────────
+function go(name,el){
+  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.nitem').forEach(n=>n.classList.remove('on'));
+  document.getElementById('pg-'+name).classList.add('on');
+  if(el) el.classList.add('on');
+  curPage = name;
+  if(name==='emp')   loadEmp();
+  if(name==='logs')  loadLogs();
+  if(name==='emerg') loadLogs();
+  if(name==='allact')loadAllActivity();
+  if(name==='dash')  {loadEmp();loadLogs();}
+  if(name==='settings') refreshCurTime();
 }
 
-function n1(v){
-  if(v === undefined || v === null || v === '' || isNaN(Number(v))) return '---';
-  return Number(v).toFixed(1);
+// ── Toast ────────────────────────────────────────────────────
+function toast(m,t){
+  var el=document.getElementById('toast');
+  el.textContent=m; el.className='show '+(t||'');
+  clearTimeout(el._t); el._t=setTimeout(()=>el.className='',3000);
 }
 
-function n3(v){
-  if(v === undefined || v === null || v === '' || isNaN(Number(v))) return '---';
-  return Number(v).toFixed(3);
-}
+// ── Status poll ──────────────────────────────────────────────
+var connOk = false;
+async function pollStatus(){
+  var d = await api('/api/status');
+  var warnEl = document.getElementById('warn-noconn');
+  document.getElementById('warn-ip').textContent = ESP_IP;
 
-function el(id){ return document.getElementById(id); }
-
-// ============================================================
-//  CLOCK
-// ============================================================
-function updateClock(){
-  var d = new Date();
-  el('clock').textContent = pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());
-  el('hdate').textContent = d.toLocaleDateString('id-ID',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
-}
-setInterval(updateClock, 1000);
-updateClock();
-
-// ============================================================
-//  LOCAL STORAGE
-// ============================================================
-function loadStorage(){
-  try {
-    var te = localStorage.getItem('pm_ev_v'+DATA_VER);
-    var tt = localStorage.getItem('pm_tr_v'+DATA_VER);
-    if(te) eventHistory = JSON.parse(te);
-    if(tt) trendData    = JSON.parse(tt);
-    cleanOld();
-  } catch(e){ eventHistory = {}; trendData = {}; }
-}
-
-function saveStorage(){
-  try {
-    localStorage.setItem('pm_ev_v'+DATA_VER, JSON.stringify(eventHistory));
-    localStorage.setItem('pm_tr_v'+DATA_VER, JSON.stringify(trendData));
-  } catch(e){ removeOldestDay(); saveStorage(); }
-}
-
-function cleanOld(){
-  var cut = new Date();
-  cut.setDate(cut.getDate() - MAX_DAYS);
-  var cutKey = fmtDate(cut);
-  Object.keys(eventHistory).forEach(function(k){ if(k < cutKey) delete eventHistory[k]; });
-  Object.keys(trendData).forEach(function(k){ if(k < cutKey) delete trendData[k]; });
-  saveStorage();
-}
-
-function removeOldestDay(){
-  var ek = Object.keys(eventHistory).sort();
-  var tk = Object.keys(trendData).sort();
-  if(ek.length) delete eventHistory[ek[0]];
-  if(tk.length) delete trendData[tk[0]];
-}
-
-// ============================================================
-//  EVENT HISTORY
-// ============================================================
-function addEvent(type, title, cssClass){
-  var now  = new Date();
-  var dk   = fmtDate(now);
-  if(!eventHistory[dk]) eventHistory[dk] = [];
-  eventHistory[dk].push({ type:type, title:title, cssClass:cssClass||'', time:fmtTime(now) });
-  if(eventHistory[dk].length > 1000) eventHistory[dk].shift();
-  saveStorage();
-  if(fmtDate(histViewD) === dk) renderHistory();
-}
-
-// ============================================================
-//  TREND DATA
-// ============================================================
-function addTrend(d){
-  var now = Date.now();
-  if(now - lastTrendSave < TREND_SAVE_MS) return;
-  lastTrendSave = now;
-
-  var dk = fmtDate(new Date());
-  var t  = fmtTime(new Date());
-
-  if(!trendData[dk]){
-    trendData[dk] = {
-      time:[], VRN:[], VSN:[], VTN:[],
-      VRS:[], VST:[], VRT:[],
-      IR:[], IS:[], IT:[], IAVG:[],
-      TAP:[], TRP:[], TPF:[], HZ:[],
-      PAE:[], NAE:[]
-    };
-  }
-
-  var td = trendData[dk];
-  td.time.push(t);
-  td.VRN.push(+(d.VRN)||0);  td.VSN.push(+(d.VSN)||0);  td.VTN.push(+(d.VTN)||0);
-  td.VRS.push(+(d.VRS)||0);  td.VST.push(+(d.VST)||0);  td.VRT.push(+(d.VRT)||0);
-  td.IR.push(+(d.IR)||0);    td.IS.push(+(d.IS)||0);    td.IT.push(+(d.IT)||0);
-  td.IAVG.push(+(d.IAVG)||0);
-  td.TAP.push(+(d.TAP)||0);  td.TRP.push(+(d.TRP)||0);
-  td.TPF.push(+(d.TPF)||0);  td.HZ.push(+(d.HZ)||0);
-  td.PAE.push(+(d.PAE)||0);  td.NAE.push(+(d.NAE)||0);
-
-  // Batasi 5000 titik per hari agar tidak overload localStorage
-  if(td.time.length > 5000){
-    Object.keys(td).forEach(function(k){ if(Array.isArray(td[k])) td[k].shift(); });
-  }
-
-  saveStorage();
-  if(fmtDate(trendViewD) === dk) updateCharts();
-  updateTrendInfo();
-}
-
-// ============================================================
-//  UI UPDATE - DASHBOARD
-// ============================================================
-function updateDashboard(d){
-  el('d_VRN').textContent = n1(d.VRN);
-  el('d_VSN').textContent = n1(d.VSN);
-  el('d_VTN').textContent = n1(d.VTN);
-  el('d_VRS_s').textContent = n1(d.VRS);
-  el('d_VST_s').textContent = n1(d.VST);
-  el('d_VRT_s').textContent = n1(d.VRT);
-
-  function setBar(barId, val){
-    el(barId).style.width = Math.min(100, Math.max(0, (+(val)||0) / MAX_CURR_A * 100)) + '%';
-  }
-  el('d_IR').textContent   = n1(d.IR);   setBar('bar_IR',   d.IR);
-  el('d_IS').textContent   = n1(d.IS);   setBar('bar_IS',   d.IS);
-  el('d_IT').textContent   = n1(d.IT);   setBar('bar_IT',   d.IT);
-  el('d_IAVG').textContent = n1(d.IAVG); setBar('bar_IAVG', d.IAVG);
-
-  el('d_TAP').textContent = n1(d.TAP);
-  el('d_TRP').textContent = n1(d.TRP);
-  el('d_TPF').textContent = n3(d.TPF);
-  el('d_HZ').textContent  = n1(d.HZ);
-  el('d_PAE').textContent = n1(d.PAE);
-  el('d_NAE').textContent = n1(d.NAE);
-  el('d_PRE').textContent = n1(d.PRE);
-  el('d_NRE').textContent = n1(d.NRE);
-}
-
-// ============================================================
-//  UI UPDATE - DETAIL
-// ============================================================
-function updateDetail(d){
-  el('dt_VRS').textContent  = n1(d.VRS);
-  el('dt_VST').textContent  = n1(d.VST);
-  el('dt_VRT').textContent  = n1(d.VRT);
-  el('dt_VRN').textContent  = n1(d.VRN);
-  el('dt_VSN').textContent  = n1(d.VSN);
-  el('dt_VTN').textContent  = n1(d.VTN);
-  el('dt_IR').textContent   = n1(d.IR);
-  el('dt_IS').textContent   = n1(d.IS);
-  el('dt_IT').textContent   = n1(d.IT);
-  el('dt_IAVG').textContent = n1(d.IAVG);
-  el('dt_TAP').textContent  = n1(d.TAP);
-  el('dt_TRP').textContent  = n1(d.TRP);
-  el('dt_TPF').textContent  = n3(d.TPF);
-  el('dt_HZ').textContent   = n1(d.HZ);
-  el('dt_PAE').textContent  = n1(d.PAE);
-  el('dt_NAE').textContent  = n1(d.NAE);
-  el('dt_PRE').textContent  = n1(d.PRE);
-  el('dt_NRE').textContent  = n1(d.NRE);
-}
-
-// ============================================================
-//  RS485 STATUS
-// ============================================================
-function updateRS485(ok){
-  var b = el('rs485badge');
-  b.textContent = ok ? 'RS485: CONNECTED' : 'RS485: DISCONNECTED';
-  b.className   = 'rs485-badge ' + (ok ? 'ok' : 'err');
-  if(prevRS485 !== null && prevRS485 !== ok){
-    addEvent('rs485',
-      ok ? 'RS485 Kembali Terhubung' : 'RS485 Terputus',
-      ok ? 'connected' : 'disconnected');
-  }
-  prevRS485 = ok;
-}
-
-// ============================================================
-//  CHARTS
-// ============================================================
-var baseScales = {
-  x:{
-    display: true,
-    grid:{ color:'rgba(0,207,255,0.04)' },
-    ticks:{ color:'#4a6080', maxTicksLimit:7, maxRotation:0 },
-    border:{ color:'rgba(0,207,255,0.07)' }
-  },
-  y:{
-    display: true,
-    grid:{ color:'rgba(0,207,255,0.04)' },
-    ticks:{ color:'#4a6080' },
-    border:{ color:'rgba(0,207,255,0.07)' }
-  }
-};
-
-var basePlugins = {
-  legend:{
-    display: true,
-    labels:{ color:'#4a6080', boxWidth:10, padding:14, font:{ size:10 } }
-  }
-};
-
-function makeDataset(label, color, fill){
-  return {
-    label: label,
-    data: [],
-    borderColor: color,
-    backgroundColor: fill ? color.replace('rgb(','rgba(').replace(')',',0.1)') : 'transparent',
-    fill: fill || false,
-    borderWidth: 1.5,
-    tension: 0.3,
-    pointRadius: 1
-  };
-}
-
-function makeChart(canvasId, datasets, extraYOpts){
-  var yOpts = Object.assign({}, baseScales.y, extraYOpts || {});
-  return new Chart(el(canvasId), {
-    type: 'line',
-    data: { labels:[], datasets: datasets },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: { duration:0 },
-      interaction: { intersect:false, mode:'index' },
-      elements: { point:{ radius:1 }, line:{ tension:0.3, borderWidth:1.5 } },
-      plugins: basePlugins,
-      scales: { x: baseScales.x, y: yOpts }
-    }
-  });
-}
-
-// Buat semua chart
-var cVLN = makeChart('cVLN', [
-  makeDataset('V R-N', '#00cfff', true),
-  makeDataset('V S-N', '#00ff99', false),
-  makeDataset('V T-N', '#ff9800', false)
-], { min: 0 });
-
-var cVLL = makeChart('cVLL', [
-  makeDataset('V R-S', '#00cfff', false),
-  makeDataset('V S-T', '#00ff99', false),
-  makeDataset('V R-T', '#ff9800', false)
-], { min: 0 });
-
-var cI = makeChart('cI', [
-  makeDataset('I-R',   '#00cfff', false),
-  makeDataset('I-S',   '#00ff99', false),
-  makeDataset('I-T',   '#ff9800', false),
-  makeDataset('I-AVG', '#888888', false)
-], { min: 0 });
-
-var cPow = makeChart('cPow', [
-  makeDataset('Active Power kW', '#00ff99', true)
-]);
-
-var cEnergy = makeChart('cEnergy', [
-  makeDataset('Act.Energy + kWh', '#00cfff', true),
-  makeDataset('Act.Energy - kWh', '#ff4466', false)
-]);
-
-// Power Factor + Frequency - dual axis (dibuat manual)
-var cPF = new Chart(el('cPF'), {
-  type: 'line',
-  data: {
-    labels: [],
-    datasets: [
-      {
-        label: 'Power Factor',
-        data: [], borderColor: '#00cfff', backgroundColor:'transparent',
-        borderWidth:1.5, tension:0.3, pointRadius:1, yAxisID:'y'
-      },
-      {
-        label: 'Frequency Hz',
-        data: [], borderColor: '#ff9800', backgroundColor:'transparent',
-        borderWidth:1.5, tension:0.3, pointRadius:1, yAxisID:'y2'
-      }
-    ]
-  },
-  options: {
-    responsive: true,
-    maintainAspectRatio: false,
-    animation: { duration:0 },
-    interaction: { intersect:false, mode:'index' },
-    plugins: basePlugins,
-    scales: {
-      x: baseScales.x,
-      y:  { display:true, position:'left',  grid:{ color:'rgba(0,207,255,0.04)' }, ticks:{ color:'#00cfff' } },
-      y2: { display:true, position:'right', grid:{ drawOnChartArea:false }, ticks:{ color:'#ff9800' } }
-    }
-  }
-});
-
-function setChartData(chart, labels, datasetsArr){
-  chart.data.labels = labels;
-  datasetsArr.forEach(function(ds, i){
-    chart.data.datasets[i].data = ds || [];
-  });
-  chart.update('none');
-}
-
-function updateCharts(){
-  var dk = fmtDate(trendViewD);
-  var td = trendData[dk] || {
-    time:[], VRN:[], VSN:[], VTN:[],
-    VRS:[], VST:[], VRT:[],
-    IR:[], IS:[], IT:[], IAVG:[],
-    TAP:[], TRP:[], TPF:[], HZ:[],
-    PAE:[], NAE:[]
-  };
-  var L = td.time || [];
-
-  setChartData(cVLN,    L, [td.VRN, td.VSN, td.VTN]);
-  setChartData(cVLL,    L, [td.VRS, td.VST, td.VRT]);
-  setChartData(cI,      L, [td.IR, td.IS, td.IT, td.IAVG]);
-  setChartData(cPow,    L, [td.TAP]);
-  setChartData(cEnergy, L, [td.PAE, td.NAE]);
-  setChartData(cPF,     L, [td.TPF, td.HZ]);
-}
-
-function updateTrendInfo(){
-  var total = 0;
-  Object.values(trendData).forEach(function(d){ total += (d.time ? d.time.length : 0); });
-  var days = Object.keys(trendData).length;
-  el('trendInfo').textContent = 'Storage: '+total+' data points dari '+days+' hari (maks '+MAX_DAYS+' hari)';
-}
-
-// ============================================================
-//  HISTORY RENDER
-// ============================================================
-var HICONS = { mqtt:'&#128279;', rs485:'&#128225;', data:'&#128202;', other:'&#128221;' };
-
-function renderHistory(){
-  var dk     = fmtDate(histViewD);
-  var filter = el('histFilter').value;
-  var ev     = (eventHistory[dk] || []).slice().reverse();
-  if(filter !== 'all') ev = ev.filter(function(e){ return e.type === filter; });
-
-  el('hcount').textContent = ev.length + ' event pada ' + dk;
-
-  if(!ev.length){
-    el('hlist').innerHTML = '<div class="no-data">Tidak ada event pada tanggal ini</div>';
-  } else {
-    el('hlist').innerHTML = ev.map(function(e){
-      var icon = HICONS[e.type] || HICONS.other;
-      return '<div class="hitem">'
-        +'<div class="hitem-icon">'+icon+'</div>'
-        +'<div class="hitem-main">'
-          +'<div class="hitem-title '+(e.cssClass||'')+'">'+e.title+'</div>'
-        +'</div>'
-        +'<div class="hitem-time">'+e.time+'</div>'
-        +'</div>';
-    }).join('');
-  }
-
-  var total = 0;
-  Object.values(eventHistory).forEach(function(a){ total += a.length; });
-  el('histInfo').textContent = 'Storage: '+total+' events dari '+Object.keys(eventHistory).length+' hari (maks '+MAX_DAYS+' hari)';
-}
-
-el('histFilter').addEventListener('change', renderHistory);
-
-// ============================================================
-//  DATE NAVIGATION
-// ============================================================
-function setupDateNav(prevId, nextId, todayId, inputId, ref, onChange){
-  el(inputId).value = fmtDate(ref.d);
-
-  el(inputId).addEventListener('change', function(){
-    ref.d = parseDate(this.value);
-    onChange();
-  });
-  el(prevId).addEventListener('click', function(){
-    ref.d.setDate(ref.d.getDate() - 1);
-    el(inputId).value = fmtDate(ref.d);
-    onChange();
-  });
-  el(nextId).addEventListener('click', function(){
-    ref.d.setDate(ref.d.getDate() + 1);
-    el(inputId).value = fmtDate(ref.d);
-    onChange();
-  });
-  el(todayId).addEventListener('click', function(){
-    ref.d = new Date();
-    el(inputId).value = fmtDate(ref.d);
-    onChange();
-  });
-}
-
-var tRef = { d: trendViewD };
-var hRef = { d: histViewD  };
-
-setupDateNav('trendPrev','trendNext','trendToday','trendDate', tRef, function(){
-  trendViewD = tRef.d; updateCharts();
-});
-setupDateNav('histPrev','histNext','histToday','histDate', hRef, function(){
-  histViewD = hRef.d; renderHistory();
-});
-
-el('clearTrends').addEventListener('click', function(){
-  if(confirm('Hapus semua data trend?')){
-    trendData = {};
-    localStorage.removeItem('pm_tr_v'+DATA_VER);
-    updateCharts(); updateTrendInfo();
-  }
-});
-
-el('clearHistory').addEventListener('click', function(){
-  if(confirm('Hapus semua history?')){
-    eventHistory = {};
-    localStorage.removeItem('pm_ev_v'+DATA_VER);
-    renderHistory();
-  }
-});
-
-// ============================================================
-//  TABS
-// ============================================================
-document.querySelectorAll('.tab').forEach(function(t){
-  t.addEventListener('click', function(){
-    document.querySelectorAll('.tab').forEach(function(x){ x.classList.remove('active'); });
-    document.querySelectorAll('.tab-content').forEach(function(x){ x.classList.remove('active'); });
-    t.classList.add('active');
-    el('tab-'+t.dataset.tab).classList.add('active');
-    if(t.dataset.tab === 'trends')  updateCharts();
-    if(t.dataset.tab === 'history') renderHistory();
-  });
-});
-
-// ============================================================
-//  MQTT
-// ============================================================
-function connectMQTT(){
-  var url = 'wss://'+MQTT_HOST+':'+MQTT_PORT+MQTT_PATH;
-  var opts = {
-    clientId: 'pm_web_'+Math.random().toString(16).substr(2,8),
-    username: MQTT_USER,
-    password: MQTT_PASS,
-    reconnectPeriod: 5000,
-    connectTimeout: 15000,
-    keepalive: 60
-  };
-
-  var client;
-  try {
-    client = mqtt.connect(url, opts);
-  } catch(e){
-    el('statusText').textContent = 'Gagal inisialisasi MQTT: '+e.message;
+  if(!d){
+    connOk = false;
+    document.getElementById('live-dot').className='brand-dot off';
+    setPill('pill-wifi','err','WIFI ERR');
+    setPill('pill-mqtt','err','MQTT ERR');
+    warnEl.className='warn-banner show';
     return;
   }
+  connOk = true;
+  warnEl.className='warn-banner';
+  document.getElementById('live-dot').className='brand-dot';
+  document.getElementById('clk').textContent = d.time;
 
-  client.on('connect', function(){
-    el('sdot').className = 'sdot on';
-    el('statusText').textContent = 'Terhubung ke MQTT: '+MQTT_HOST;
-    client.subscribe(TOPIC_DATA);
-    addEvent('mqtt','MQTT Terhubung ke broker','connected');
-  });
-
-  client.on('reconnect', function(){
-    el('sdot').className = 'sdot warn';
-    el('statusText').textContent = 'Mencoba reconnect MQTT...';
-  });
-
-  client.on('error', function(err){
-    el('sdot').className = 'sdot';
-    el('statusText').textContent = 'MQTT Error: '+(err.message||err);
-  });
-
-  client.on('offline', function(){
-    el('sdot').className = 'sdot';
-    el('statusText').textContent = 'MQTT Offline / Terputus';
-    addEvent('mqtt','MQTT Terputus','disconnected');
-  });
-
-  client.on('message', function(topic, payload){
-    try {
-      var d = JSON.parse(payload.toString());
-
-      updateDashboard(d);
-      updateDetail(d);
-      updateRS485(d.rs485 === 1 || d.rs485 === true);
-      addTrend(d);
-
-      // Log snapshot ke history tiap 60 detik
-      var now = Date.now();
-      if(now - lastDataLog > 60000){
-        lastDataLog = now;
-        addEvent('data',
-          'Snapshot — Power: '+n1(d.TAP)+' kW | V R-N: '+n1(d.VRN)+' V | I AVG: '+n1(d.IAVG)+' A',
-          'info');
-      }
-
-    } catch(e){ console.error('MQTT parse error:', e); }
-  });
+  setPill('pill-wifi', d.wifi?'ok':'warn', d.wifi?'WiFi OK':'WiFi --');
+  setPill('pill-mqtt', d.mqtt?'ok':'warn', d.mqtt?'MQTT OK':'MQTT --');
+}
+function setPill(id,cls,lbl){
+  var el=document.getElementById(id);
+  el.className='status-pill '+cls;
+  el.querySelector('span:last-child').textContent=lbl;
 }
 
-// ============================================================
-//  INIT
-// ============================================================
-loadStorage();
-renderHistory();
-updateCharts();
-updateTrendInfo();
-connectMQTT();
+setInterval(pollStatus,4000);
+pollStatus();
+
+// Local clock
+setInterval(()=>{
+  var s=new Date().toTimeString().slice(0,8);
+  var el=document.getElementById('clk');
+  if(el.textContent==='--:--:--') el.textContent=s;
+},1000);
+
+// ── Auto refresh ─────────────────────────────────────────────
+function startAutoRefresh(){
+  if(autoRefTmr) clearInterval(autoRefTmr);
+  autoRefTmr = setInterval(()=>{
+    if(curPage==='dash'){loadEmp();loadLogs();}
+    else if(curPage==='emp')    loadEmp();
+    else if(curPage==='logs')   loadLogs();
+    else if(curPage==='emerg')  loadLogs();
+    else if(curPage==='allact') loadAllActivity();
+    else if(curPage==='settings') refreshCurTime();
+  },5000);
+}
+startAutoRefresh();
+
+// ── Badge helpers ─────────────────────────────────────────────
+var menuColor={1:'bb',2:'bg',3:'by',4:'bgr',5:'bgr',6:'br'};
+function mbadge(menu,name){
+  return'<span class="badge '+(menuColor[menu]||'bgr')+'">'+name+'</span>';
+}
+function sbadge(s){
+  if(!s||s==='TEPAT')    return'<span class="badge bg">TEPAT</span>';
+  if(s==='TERLAMBAT')    return'<span class="badge by">TERLAMBAT</span>';
+  if(s==='TDK SESUAI'||s==='JADWAL TDK SESUAI') return'<span class="badge bor">TDK SESUAI</span>';
+  if(s==='DARURAT')      return'<span class="badge br">DARURAT</span>';
+  if(s==='DIBLOKIR')     return'<span class="badge br">DIBLOKIR</span>';
+  if(s==='NONAKTIF')     return'<span class="badge br">NONAKTIF</span>';
+  return'<span class="badge bgr">'+s+'</span>';
+}
+function timeCell(dt){
+  return`<td style="font-family:monospace;font-size:10px;white-space:nowrap">
+    ${dt.slice(11,19)} <span style="color:var(--text3)">${dt.slice(0,10)}</span></td>`;
+}
+
+// ── Load Employees ────────────────────────────────────────────
+async function loadEmp(){
+  var d=await api('/api/employees');
+  if(!d){
+    document.getElementById('emp-tb').innerHTML='<tr><td colspan="9" class="emp-cell">Tidak dapat terhubung ke ESP32</td></tr>';
+    return;
+  }
+  employees=d;
+  document.getElementById('s-tot').textContent=d.length;
+  var act=d.filter(e=>e.enabled).length;
+  document.getElementById('s-act').textContent=act;
+  document.getElementById('s-inact').textContent=d.length-act;
+  var tb=document.getElementById('emp-tb');
+  if(!d.length){tb.innerHTML='<tr><td colspan="9" class="emp-cell">Belum ada karyawan terdaftar</td></tr>';return;}
+  tb.innerHTML=d.map(e=>`<tr>
+    <td style="font-family:monospace;font-weight:700;color:#64b5f6">#${e.id}</td>
+    <td style="font-weight:700">${e.name}</td>
+    <td style="font-family:monospace">${e.inTime}</td>
+    <td style="font-family:monospace">${e.outTime}</td>
+    <td style="font-family:monospace;font-size:10px;color:var(--text3)">${e.breakIn}–${e.breakOut}</td>
+    <td style="font-size:10px">${e.izinTugas?'<span class="badge bg">'+e.izinTugasJam+'</span>':'<span class="badge bgr">—</span>'}</td>
+    <td style="font-size:10px">${e.izinTinggal?'<span class="badge bb">'+e.izinTinggalJam+'</span>':'<span class="badge bgr">—</span>'}</td>
+    <td><span class="badge ${e.enabled?'bg':'br'}">${e.enabled?'AKTIF':'NONAKTIF'}</span></td>
+    <td><div class="flex gap8">
+      <button class="btn bo bsm" onclick="openEdit(${e.id})">EDIT</button>
+      <button class="btn bsm ${e.enabled?'br2':'bg2'}" onclick="toggleEmp(${e.id})">${e.enabled?'DISABLE':'ENABLE'}</button>
+      <button class="btn bo bsm" style="color:var(--red)" onclick="delEmp(${e.id},'${e.name.replace(/'/g,"\\'")}')">HAPUS</button>
+    </div></td>
+  </tr>`).join('');
+}
+
+// ── Load Logs ─────────────────────────────────────────────────
+async function loadLogs(){
+  var d=await api('/api/logs');
+  if(!d) return;
+  var today=new Date().toISOString().slice(0,10);
+  document.getElementById('s-today').textContent=d.filter(l=>l.dt.startsWith(today)).length;
+
+  var dash=document.getElementById('dash-log');
+  dash.innerHTML=d.slice(0,10).map(l=>`<tr>
+    ${timeCell(l.dt)}
+    <td style="font-weight:700">${l.name}</td>
+    <td>${mbadge(l.menu,l.menuName)}</td>
+    <td>${sbadge(l.status)}</td>
+  </tr>`).join('')||'<tr><td colspan="4" class="emp-cell">Belum ada aktivitas hari ini</td></tr>';
+
+  var ltb=document.getElementById('log-tb');
+  ltb.innerHTML=d.map(l=>`<tr>
+    ${timeCell(l.dt)}
+    <td style="font-weight:700">${l.name}</td>
+    <td style="font-family:monospace;color:var(--text3)">#${l.id}</td>
+    <td>${mbadge(l.menu,l.menuName)}</td>
+    <td>${sbadge(l.status)}</td>
+  </tr>`).join('')||'<tr><td colspan="5" class="emp-cell">Belum ada log</td></tr>';
+
+  var etb=document.getElementById('emerg-tb');
+  var prob=d.filter(l=>!l.onTime||l.menu===6||l.status==='TDK SESUAI');
+  etb.innerHTML=prob.map(l=>`<tr>
+    ${timeCell(l.dt)}
+    <td style="font-weight:700">${l.name}</td>
+    <td style="font-family:monospace;color:var(--text3)">#${l.id}</td>
+    <td><span class="badge br">${l.menuName}</span></td>
+    <td>${sbadge(l.status)}</td>
+    <td style="font-size:10px;color:var(--text3)">${l.menu===6?'Darurat':l.status==='TERLAMBAT'?'Terlambat':'Jadwal tdk sesuai'}</td>
+  </tr>`).join('')||'<tr><td colspan="6" class="emp-cell">Tidak ada log masalah</td></tr>';
+}
+
+// ── All Activity ──────────────────────────────────────────────
+async function loadAllActivity(){
+  var d=await api('/api/allactivity');
+  var tb=document.getElementById('allact-tb');
+  if(!d){tb.innerHTML='<tr><td colspan="5" class="emp-cell">Tidak dapat terhubung</td></tr>';return;}
+  tb.innerHTML=d.map(a=>`<tr>
+    ${timeCell(a.dt)}
+    <td style="font-weight:700">${a.name}</td>
+    <td style="font-family:monospace;color:var(--text3)">#${a.id}</td>
+    <td>${mbadge(a.menu,a.menuName)}</td>
+    <td>${sbadge(a.result)}</td>
+  </tr>`).join('')||'<tr><td colspan="5" class="emp-cell">Belum ada aktivitas</td></tr>';
+}
+
+// ── Edit Employee ─────────────────────────────────────────────
+function openEdit(id){
+  var e=employees.find(x=>x.id===id); if(!e)return;
+  document.getElementById('eid').value=e.id;
+  document.getElementById('eid-d').value='#'+e.id;
+  document.getElementById('ename').value=e.name;
+  document.getElementById('ein').value=e.inTime;
+  document.getElementById('eout').value=e.outTime;
+  document.getElementById('ebrin').value=e.breakIn;
+  document.getElementById('ebrout').value=e.breakOut;
+  document.getElementById('eit-aktif').checked=e.izinTugas||false;
+  document.getElementById('eit-jam').value=e.izinTugasJam||'08:00';
+  document.getElementById('etn-aktif').checked=e.izinTinggal||false;
+  document.getElementById('etn-jam').value=e.izinTinggalJam||'08:00';
+  document.getElementById('medit').classList.add('open');
+}
+function closeMod(id){document.getElementById(id).classList.remove('open');}
+
+async function saveEdit(){
+  var id=document.getElementById('eid').value;
+  var nm=document.getElementById('ename').value.trim();
+  if(!nm){toast('Nama kosong','tr');return;}
+  var b=`id=${id}&name=${encodeURIComponent(nm)}`
+    +`&inTime=${document.getElementById('ein').value}`
+    +`&outTime=${document.getElementById('eout').value}`
+    +`&breakIn=${document.getElementById('ebrin').value}`
+    +`&breakOut=${document.getElementById('ebrout').value}`
+    +`&izinTugas=${document.getElementById('eit-aktif').checked?1:0}`
+    +`&izinTugasJam=${document.getElementById('eit-jam').value}`
+    +`&izinTinggal=${document.getElementById('etn-aktif').checked?1:0}`
+    +`&izinTinggalJam=${document.getElementById('etn-jam').value}`;
+  var r=await api('/api/employee',{method:'POST',body:b});
+  if(r&&r.status==='ok'){toast('Tersimpan ✓','tg');closeMod('medit');loadEmp();}
+  else toast('Gagal simpan','tr');
+}
+
+async function toggleEmp(id){
+  var e=employees.find(x=>x.id===id);
+  if(!confirm((e&&e.enabled?'Nonaktifkan':'Aktifkan')+' karyawan ID #'+id+'?'))return;
+  var r=await api('/api/toggle',{method:'POST',body:'id='+id});
+  if(r&&r.status==='ok'){toast('Berhasil ✓','tg');loadEmp();}else toast('Gagal','tr');
+}
+
+async function delEmp(id,name){
+  if(!confirm('Hapus "'+name+'" (#'+id+') dari sensor dan database?'))return;
+  var r=await api('/api/delete',{method:'POST',body:'id='+id});
+  if(r&&r.status==='ok'){toast('Dihapus ✓','tg');loadEmp();}else toast('Gagal','tr');
+}
+
+// ── Enroll ────────────────────────────────────────────────────
+async function startEnroll(){
+  var box=document.getElementById('ebox');
+  box.className='ebox wait';
+  box.innerHTML=`<div class="eicon">◈</div>
+    <div class="etitle">Menunggu Proses di Arduino...</div>
+    <div class="esub">Ikuti instruksi di layar OLED.<br>Tempel jari pertama saat diminta.</div>
+    <div style="margin-top:20px"><button class="btn bo" onclick="resetEnroll()">BATAL</button></div>`;
+  var r=await api('/api/enroll',{method:'POST'});
+  if(!r){toast('Tidak terhubung','tr');resetEnroll();return;}
+  var tries=0;
+  enrollTmr=setInterval(async()=>{
+    if(++tries>70){clearInterval(enrollTmr);resetEnroll();toast('Timeout','tr');return;}
+    var res=await api('/api/enrollresult');
+    if(res&&res.done){
+      clearInterval(enrollTmr);
+      if(res.id>0){
+        box.className='ebox ok';
+        box.innerHTML=`<div class="eicon" style="color:var(--green)">✓</div>
+          <div class="etitle">Enroll Berhasil!</div>
+          <div class="esub">ID Fingerprint: <strong>#${res.id}</strong></div>`;
+        document.getElementById('nid').value=res.id;
+        document.getElementById('nname').value='';
+        document.getElementById('eresult').style.display='block';
+        toast('Enroll berhasil! Lengkapi data karyawan.','tg');
+      }else{resetEnroll();toast('Enroll gagal','tr');}
+    }
+  },1000);
+}
+function resetEnroll(){
+  if(enrollTmr)clearInterval(enrollTmr);
+  document.getElementById('ebox').className='ebox';
+  document.getElementById('ebox').innerHTML=`<div class="eicon">◈</div>
+    <div class="etitle">Siap Mendaftarkan Jari</div>
+    <div class="esub">Klik tombol di bawah lalu ikuti instruksi di layar OLED Arduino.</div>
+    <div style="margin-top:20px"><button class="btn bp" onclick="startEnroll()">MULAI ENROLL</button></div>`;
+  document.getElementById('eresult').style.display='none';
+}
+async function saveNewEmp(){
+  var id=document.getElementById('nid').value;
+  var nm=document.getElementById('nname').value.trim();
+  if(!nm){toast('Masukkan nama karyawan','tr');return;}
+  var b=`id=${id}&name=${encodeURIComponent(nm)}`
+    +`&inTime=${document.getElementById('nin').value}`
+    +`&outTime=${document.getElementById('nout').value}`
+    +`&breakIn=${document.getElementById('nbrin').value}`
+    +`&breakOut=${document.getElementById('nbrout').value}`
+    +`&izinTugas=0&izinTinggal=0`;
+  var r=await api('/api/employee',{method:'POST',body:b});
+  if(r&&r.status==='ok'){toast('"'+nm+'" berhasil didaftarkan ✓','tg');resetEnroll();loadEmp();}
+  else toast('Gagal simpan','tr');
+}
+
+// ── Set Time ──────────────────────────────────────────────────
+async function refreshCurTime(){
+  var d=await api('/api/status');
+  if(d){
+    document.getElementById('cur-time').textContent=d.time;
+    document.getElementById('cur-date').textContent=d.date;
+  }
+}
+async function setTime(){
+  var dt=document.getElementById('set-date').value;
+  var tm=document.getElementById('set-time').value;
+  if(!dt||!tm){toast('Pilih tanggal dan jam','tr');return;}
+  var parts=dt.split('-'),tparts=tm.split(':');
+  var b=`y=${parts[0]}&mo=${parseInt(parts[1])}&d=${parseInt(parts[2])}&h=${parseInt(tparts[0])}&mi=${parseInt(tparts[1])}&s=0`;
+  var r=await api('/api/settime',{method:'POST',body:b});
+  if(r&&r.status==='ok'){toast('Jam berhasil diset ✓','tg');refreshCurTime();}
+  else toast('Gagal set jam','tr');
+}
+
+// ── Reset Fingers ─────────────────────────────────────────────
+async function confirmResetFingers(){
+  if(!confirm('⚠ HAPUS SEMUA JARI & DATA KARYAWAN?\n\nSeluruh data tidak dapat dikembalikan.\nLanjutkan?'))return;
+  var kode=prompt('Ketik RESET untuk konfirmasi:');
+  if(kode!=='RESET'){toast('Dibatalkan');return;}
+  toast('Mereset sensor...');
+  var r=await api('/api/resetfingers',{method:'POST'});
+  if(r&&r.status==='ok'){toast('Semua jari & data dihapus ✓','tg');loadEmp();}
+  else toast((r&&r.msg)||'Gagal reset','tr');
+}
+
+// ── Init ──────────────────────────────────────────────────────
+loadEmp(); loadLogs();
+document.getElementById('set-date').value=new Date().toISOString().slice(0,10);
+document.getElementById('set-time').value=new Date().toTimeString().slice(0,5);
+document.getElementById('set-ip').value=ESP_IP;
 </script>
 </body>
 </html>
