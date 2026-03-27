@@ -3,261 +3,163 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Absensi Online — Fingerprint System</title>
+<title>Absensi Fingerprint — IoT Dashboard</title>
+<!-- MQTT.js via CDN — untuk WebSocket ke HiveMQ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/5.0.5/mqtt.min.js"></script>
 <style>
-/* ── Reset & Base ── */
+/* ── RESET & VARS ── */
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#0f0f0d;
-  --bg2:#161614;
-  --bg3:#1e1e1b;
-  --border:#2a2a26;
-  --border2:#333330;
-  --text:#e8e8e0;
-  --text2:#a0a098;
-  --text3:#666660;
-  --green:#4caf50;
-  --green2:#2d5a27;
-  --red:#e53935;
-  --red2:#7a1e1e;
-  --yellow:#f9a825;
-  --blue:#1565c0;
-  --blue2:#0d3a7a;
-  --orange:#e65100;
+  --bg:#0b0b09;--bg2:#111110;--bg3:#191917;--bg4:#1f1f1c;
+  --border:#252522;--border2:#2e2e2a;
+  --text:#ddddd5;--text2:#888880;--text3:#444440;
+  --green:#4caf50;--green-d:#2a5224;
+  --red:#e53935;--red-d:#6a1a1a;
+  --yellow:#f9a825;--yellow-d:#4a3800;
+  --blue:#42a5f5;--blue-d:#0d3a6a;
+  --orange:#ff7043;--orange-d:#4a1800;
   --accent:#4caf50;
 }
-body{font-family:'IBM Plex Mono',monospace,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:13px}
+body{font-family:'IBM Plex Mono',monospace,system-ui;background:var(--bg);color:var(--text);min-height:100vh;font-size:12px}
 
-/* ── Topbar ── */
+/* ── TOPBAR ── */
 .topbar{
   display:flex;align-items:center;justify-content:space-between;
-  padding:0 24px;height:48px;
+  padding:0 20px;height:46px;
   background:var(--bg2);border-bottom:1px solid var(--border);
   position:sticky;top:0;z-index:100;
 }
-.brand{font-size:11px;font-weight:700;letter-spacing:.2em;color:var(--text);display:flex;align-items:center;gap:10px}
-.brand-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green)}
-.brand-dot.off{background:#555;box-shadow:none}
-.topinfo{display:flex;gap:20px;align-items:center}
-.topclk{font-size:13px;font-weight:700;color:var(--text2);letter-spacing:.05em}
-.status-pill{
-  display:flex;align-items:center;gap:6px;
-  padding:4px 10px;border-radius:2px;
-  font-size:9px;font-weight:700;letter-spacing:.15em;
-  background:var(--bg3);border:1px solid var(--border);
-  color:var(--text3);
+.brand{font-size:10px;font-weight:700;letter-spacing:.22em;color:var(--text);display:flex;align-items:center;gap:9px}
+.pulse{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 0 0 rgba(76,175,80,.4);animation:pulse-ring 2s infinite}
+.pulse.off{background:#333;box-shadow:none;animation:none}
+@keyframes pulse-ring{0%{box-shadow:0 0 0 0 rgba(76,175,80,.4)}70%{box-shadow:0 0 0 6px rgba(76,175,80,0)}100%{box-shadow:0 0 0 0 rgba(76,175,80,0)}}
+.topright{display:flex;gap:12px;align-items:center}
+.pill{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:3px 9px;border-radius:2px;
+  font-size:8px;font-weight:700;letter-spacing:.15em;
+  background:var(--bg3);border:1px solid var(--border);color:var(--text3);
 }
-.status-pill .dot{width:6px;height:6px;border-radius:50%;background:#444}
-.status-pill.ok .dot{background:var(--green);box-shadow:0 0 4px var(--green)}
-.status-pill.ok{border-color:var(--green2);color:var(--green)}
-.status-pill.warn .dot{background:var(--yellow)}
-.status-pill.warn{border-color:#5a4a00;color:var(--yellow)}
-.status-pill.err .dot{background:var(--red)}
-.status-pill.err{border-color:var(--red2);color:var(--red)}
-#ip-config{
-  padding:4px 10px;border:1px solid var(--border2);background:var(--bg3);
-  color:var(--text2);font-size:10px;border-radius:2px;font-family:inherit;
-  cursor:pointer;outline:none;
-}
-#ip-config:focus{border-color:var(--accent)}
+.pill .d{width:5px;height:5px;border-radius:50%;background:#333}
+.pill.ok{border-color:var(--green-d);color:var(--green)}.pill.ok .d{background:var(--green)}
+.pill.warn{border-color:var(--yellow-d);color:var(--yellow)}.pill.warn .d{background:var(--yellow)}
+.pill.err{border-color:var(--red-d);color:var(--red)}.pill.err .d{background:var(--red)}
+.topclk{font-size:12px;font-weight:700;color:var(--text2);letter-spacing:.04em;font-family:monospace}
 
-/* ── Layout ── */
-.layout{display:grid;grid-template-columns:188px 1fr;min-height:calc(100vh - 48px)}
+/* ── LAYOUT ── */
+.layout{display:grid;grid-template-columns:180px 1fr;min-height:calc(100vh - 46px)}
 .sidebar{
   background:var(--bg2);border-right:1px solid var(--border);
-  padding:12px 0;position:sticky;top:48px;
-  height:calc(100vh - 48px);overflow-y:auto;
+  padding:10px 0;position:sticky;top:46px;
+  height:calc(100vh - 46px);overflow-y:auto;
 }
-.nsec{
-  padding:12px 16px 4px;font-size:8px;font-weight:700;
-  letter-spacing:.22em;color:var(--text3);
-}
+.nsec{padding:10px 14px 3px;font-size:7px;font-weight:700;letter-spacing:.25em;color:var(--text3)}
 .nitem{
-  display:flex;align-items:center;gap:9px;
-  padding:9px 16px;cursor:pointer;font-size:11px;
-  color:var(--text3);border-left:2px solid transparent;
-  transition:all .12s;letter-spacing:.03em;
+  display:flex;align-items:center;gap:8px;padding:8px 14px;
+  cursor:pointer;font-size:10px;color:var(--text3);
+  border-left:2px solid transparent;transition:all .1s;letter-spacing:.03em;
 }
-.nitem:hover{color:var(--text2);background:rgba(255,255,255,.03)}
-.nitem.on{color:var(--text);border-left-color:var(--accent);background:rgba(76,175,80,.06)}
-.nitem .ico{font-size:13px;width:16px;text-align:center}
+.nitem:hover{color:var(--text2);background:rgba(255,255,255,.02)}
+.nitem.on{color:var(--text);border-left-color:var(--accent);background:rgba(76,175,80,.05)}
+.nitem .ic{width:14px;text-align:center;font-size:12px}
 
-/* ── Main ── */
-.main{padding:28px 32px;overflow-y:auto}
+/* ── MAIN ── */
+.main{padding:24px 28px;overflow-y:auto}
 .pg{display:none}.pg.on{display:block}
-.ptitle{font-size:22px;font-weight:700;letter-spacing:-.01em;margin-bottom:3px}
-.psub{font-size:10px;color:var(--text3);letter-spacing:.08em;margin-bottom:24px}
+.ptitle{font-size:20px;font-weight:700;letter-spacing:-.01em;margin-bottom:2px}
+.psub{font-size:9px;color:var(--text3);letter-spacing:.1em;margin-bottom:20px}
 
-/* ── Stats grid ── */
-.sgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+/* ── STATUS GRID ── */
+.sgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
 .scard{
   background:var(--bg2);border:1px solid var(--border);
-  padding:16px;border-radius:2px;
-  position:relative;overflow:hidden;
+  padding:14px;border-radius:2px;
 }
-.scard::before{
-  content:'';position:absolute;top:0;left:0;right:0;height:2px;
-  background:var(--accent);opacity:0;transition:.2s;
-}
-.scard:hover::before{opacity:1}
-.slabel{font-size:8px;font-weight:700;letter-spacing:.18em;color:var(--text3);margin-bottom:8px}
-.sval{font-size:28px;font-weight:700;color:var(--text)}
-.sval.g{color:var(--green)}.sval.r{color:var(--red)}.sval.b{color:#42a5f5}
+.slbl{font-size:7px;font-weight:700;letter-spacing:.18em;color:var(--text3);margin-bottom:6px}
+.sval{font-size:26px;font-weight:700}
+.sval.g{color:var(--green)}.sval.r{color:var(--red)}.sval.b{color:var(--blue)}
 
-/* ── Card ── */
-.card{
-  background:var(--bg2);border:1px solid var(--border);
-  border-radius:2px;margin-bottom:16px;
-}
-.ch{
-  padding:11px 16px;border-bottom:1px solid var(--border);
-  display:flex;align-items:center;justify-content:space-between;
-}
-.ct{font-size:9px;font-weight:700;letter-spacing:.18em;color:var(--text3)}
-.cb{padding:16px}
+/* ── CARD ── */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:2px;margin-bottom:14px}
+.ch{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.ct{font-size:8px;font-weight:700;letter-spacing:.18em;color:var(--text3)}
+.cb{padding:14px}
 
-/* ── Table ── */
+/* ── TABLE ── */
 table{width:100%;border-collapse:collapse;font-size:11px}
-th{
-  text-align:left;padding:8px 12px;
-  background:var(--bg3);border-bottom:1px solid var(--border);
-  font-size:8px;font-weight:700;letter-spacing:.15em;color:var(--text3);
-}
-td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+th{text-align:left;padding:7px 11px;background:var(--bg3);border-bottom:1px solid var(--border);font-size:7px;font-weight:700;letter-spacing:.15em;color:var(--text3)}
+td{padding:8px 11px;border-bottom:1px solid var(--border);vertical-align:middle}
 tr:last-child td{border:none}
-tr:hover td{background:rgba(255,255,255,.02)}
-.emp-cell{text-align:center;padding:32px;color:var(--text3);font-size:11px;letter-spacing:.05em}
+tr:hover td{background:rgba(255,255,255,.015)}
+.emp-cell{text-align:center;padding:28px;color:var(--text3);font-size:10px;letter-spacing:.05em}
 
-/* ── Badges ── */
-.badge{
-  display:inline-block;padding:2px 7px;border-radius:2px;
-  font-size:8px;font-weight:700;letter-spacing:.1em;
-  font-family:'IBM Plex Mono',monospace;
-}
-.bg{background:rgba(76,175,80,.15);color:#66bb6a;border:1px solid rgba(76,175,80,.3)}
-.br{background:rgba(229,57,53,.15);color:#ef5350;border:1px solid rgba(229,57,53,.3)}
-.by{background:rgba(249,168,37,.15);color:#ffca28;border:1px solid rgba(249,168,37,.3)}
-.bb{background:rgba(66,165,245,.15);color:#64b5f6;border:1px solid rgba(66,165,245,.3)}
-.bgr{background:rgba(255,255,255,.06);color:var(--text3);border:1px solid var(--border)}
-.bor{background:rgba(230,81,0,.15);color:#ff7043;border:1px solid rgba(230,81,0,.3)}
+/* ── BADGES ── */
+.badge{display:inline-block;padding:1px 6px;border-radius:2px;font-size:7px;font-weight:700;letter-spacing:.1em}
+.bg{background:rgba(76,175,80,.12);color:#66bb6a;border:1px solid rgba(76,175,80,.25)}
+.br{background:rgba(229,57,53,.12);color:#ef5350;border:1px solid rgba(229,57,53,.25)}
+.by{background:rgba(249,168,37,.12);color:#ffca28;border:1px solid rgba(249,168,37,.25)}
+.bb{background:rgba(66,165,245,.12);color:#64b5f6;border:1px solid rgba(66,165,245,.25)}
+.bgr{background:rgba(255,255,255,.05);color:var(--text3);border:1px solid var(--border)}
+.bor{background:rgba(255,112,67,.12);color:var(--orange);border:1px solid rgba(255,112,67,.25)}
 
-/* ── Buttons ── */
-.btn{
-  display:inline-flex;align-items:center;gap:5px;
-  padding:7px 14px;border:none;border-radius:2px;
-  font-size:10px;font-weight:700;letter-spacing:.1em;
-  cursor:pointer;transition:all .12s;
-  font-family:'IBM Plex Mono',monospace;
-}
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:4px;padding:6px 12px;border:none;border-radius:2px;font-size:9px;font-weight:700;letter-spacing:.1em;cursor:pointer;transition:all .1s;font-family:inherit}
 .bp{background:var(--text);color:var(--bg)}.bp:hover{background:#ccc}
-.bg2{background:var(--green2);color:#fff;border:1px solid rgba(76,175,80,.4)}.bg2:hover{background:#2a5224}
-.br2{background:var(--red2);color:#fff;border:1px solid rgba(229,57,53,.4)}.br2:hover{background:#6a1919}
-.bo{
-  background:transparent;border:1px solid var(--border2);
-  color:var(--text2);
-}.bo:hover{background:var(--bg3);color:var(--text)}
-.bsm{padding:4px 9px;font-size:9px}
-.btn:disabled{opacity:.35;cursor:not-allowed}
+.bg2{background:var(--green-d);color:var(--green);border:1px solid rgba(76,175,80,.3)}.bg2:hover{background:#1a3a16}
+.br2{background:var(--red-d);color:var(--red);border:1px solid rgba(229,57,53,.3)}.br2:hover{background:#4a1010}
+.bo{background:transparent;border:1px solid var(--border2);color:var(--text2)}.bo:hover{background:var(--bg3)}
+.bsm{padding:3px 8px;font-size:8px}
+.btn:disabled{opacity:.3;cursor:not-allowed}
 
-/* ── Form ── */
-.frow{display:grid;gap:12px;margin-bottom:12px}
+/* ── FORM ── */
+.frow{display:grid;gap:10px;margin-bottom:10px}
 .c2{grid-template-columns:1fr 1fr}.c3{grid-template-columns:1fr 1fr 1fr}.c4{grid-template-columns:1fr 1fr 1fr 1fr}
-.fg label{display:block;font-size:8px;font-weight:700;letter-spacing:.15em;color:var(--text3);margin-bottom:4px}
-.fg input,.fg select{
-  width:100%;padding:8px 10px;
-  background:var(--bg3);border:1px solid var(--border2);
-  color:var(--text);border-radius:2px;font-size:11px;
-  font-family:'IBM Plex Mono',monospace;outline:none;
-}
+.fg label{display:block;font-size:7px;font-weight:700;letter-spacing:.15em;color:var(--text3);margin-bottom:3px}
+.fg input,.fg select{width:100%;padding:7px 9px;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:2px;font-size:11px;font-family:monospace;outline:none}
 .fg input:focus,.fg select:focus{border-color:var(--accent)}
 .fg input[readonly]{background:var(--bg);color:var(--text3)}
 .fg input[type=checkbox]{width:auto;accent-color:var(--accent)}
-.izin-row{display:flex;align-items:center;gap:10px;padding:6px 0}
+.izin-row{display:flex;align-items:center;gap:8px;padding:5px 0}
 
-/* ── Enroll box ── */
-.ebox{
-  border:1px dashed var(--border2);border-radius:2px;
-  padding:40px 24px;text-align:center;
-  background:var(--bg3);
-}
-.ebox.wait{border-color:var(--yellow);border-style:solid;animation:pulse 1.2s infinite}
+/* ── ENROLL BOX ── */
+.ebox{border:1px dashed var(--border2);border-radius:2px;padding:36px 20px;text-align:center;background:var(--bg3)}
+.ebox.wait{border-color:var(--yellow);border-style:solid;animation:blink-b 1.2s infinite}
 .ebox.ok{border-color:var(--green);border-style:solid}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
-.eicon{font-size:40px;margin-bottom:12px;color:var(--text2)}
-.etitle{font-size:14px;font-weight:700;margin-bottom:6px}
-.esub{font-size:11px;color:var(--text3);line-height:1.6}
+@keyframes blink-b{0%,100%{opacity:1}50%{opacity:.5}}
+.eicon{font-size:36px;margin-bottom:10px;color:var(--text3)}
+.etitle{font-size:13px;font-weight:700;margin-bottom:5px}
+.esub{font-size:10px;color:var(--text3);line-height:1.6}
 
-/* ── Modal ── */
-.moverlay{
-  display:none;position:fixed;inset:0;
-  background:rgba(0,0,0,.7);z-index:200;
-  align-items:center;justify-content:center;
-  backdrop-filter:blur(2px);
-}
+/* ── MODAL ── */
+.moverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
 .moverlay.open{display:flex}
-.modal{
-  background:var(--bg2);border:1px solid var(--border2);
-  width:540px;max-width:95vw;border-radius:2px;
-}
-.mh{
-  padding:14px 18px;border-bottom:1px solid var(--border);
-  display:flex;align-items:center;justify-content:space-between;
-}
-.mt{font-size:10px;font-weight:700;letter-spacing:.15em;color:var(--text2)}
-.mx{background:none;border:none;font-size:16px;cursor:pointer;color:var(--text3);padding:0 3px}
-.mx:hover{color:var(--text)}
-.mb{padding:18px}
-.mf{padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
-.msep{border:none;border-top:1px dashed var(--border);margin:12px 0}
-.mlabel{font-size:8px;font-weight:700;letter-spacing:.18em;color:var(--text3);margin-bottom:8px}
+.modal{background:var(--bg2);border:1px solid var(--border2);width:520px;max-width:95vw;border-radius:2px}
+.mh{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.mt{font-size:9px;font-weight:700;letter-spacing:.15em;color:var(--text2)}
+.mx{background:none;border:none;font-size:15px;cursor:pointer;color:var(--text3)}.mx:hover{color:var(--text)}
+.mb{padding:16px}
+.mf{padding:10px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+.msep{border:none;border-top:1px dashed var(--border);margin:10px 0}
+.mlbl{font-size:7px;font-weight:700;letter-spacing:.18em;color:var(--text3);margin-bottom:7px}
 
-/* ── Toast ── */
-#toast{
-  position:fixed;bottom:20px;right:20px;z-index:999;
-  background:var(--bg3);color:var(--text);
-  padding:10px 16px;border-radius:2px;
-  font-size:10px;font-family:'IBM Plex Mono',monospace;font-weight:700;
-  border:1px solid var(--border2);letter-spacing:.05em;
-  transform:translateY(60px);opacity:0;transition:all .25s;pointer-events:none;
-}
+/* ── TOAST ── */
+#toast{position:fixed;bottom:18px;right:18px;z-index:999;background:var(--bg3);color:var(--text);padding:9px 14px;border-radius:2px;font-size:10px;font-family:monospace;font-weight:700;border:1px solid var(--border2);letter-spacing:.05em;transform:translateY(50px);opacity:0;transition:all .22s;pointer-events:none}
 #toast.show{transform:translateY(0);opacity:1}
-#toast.tg{border-color:var(--green2);color:var(--green)}
-#toast.tr{border-color:var(--red2);color:var(--red)}
+#toast.tg{border-color:var(--green-d);color:var(--green)}
+#toast.tr{border-color:var(--red-d);color:var(--red)}
 
-/* ── Misc ── */
-.flex{display:flex}.gap8{gap:8px}.gap16{gap:16px}.aic{align-items:center}
-.mt16{margin-top:16px}.mt24{margin-top:24px}
-.conn-bar{
-  background:var(--bg3);border:1px solid var(--border);
-  border-radius:2px;padding:12px 16px;margin-bottom:20px;
-  display:flex;align-items:center;justify-content:space-between;
-  font-size:10px;
-}
-.conn-bar .lbl{color:var(--text3);letter-spacing:.05em}
-.conn-bar .val{font-weight:700;color:var(--text2);font-family:monospace}
-.live-ind{
-  display:inline-flex;align-items:center;gap:5px;
-  font-size:9px;color:var(--text3);letter-spacing:.08em;
-}
-.live-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:blink 2s infinite}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
-
-.warn-banner{
-  background:rgba(249,168,37,.08);border:1px solid rgba(249,168,37,.25);
+/* ── MISC ── */
+.flex{display:flex}.gap8{gap:8px}.aic{align-items:center}
+.mt12{margin-top:12px}.mt20{margin-top:20px}
+.live-dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--green);animation:blink-d 2s infinite;margin-right:4px}
+@keyframes blink-d{0%,100%{opacity:1}50%{opacity:.2}}
+.conn-banner{
+  background:rgba(249,168,37,.07);border:1px solid rgba(249,168,37,.2);
   border-radius:2px;padding:10px 14px;margin-bottom:16px;
-  font-size:11px;color:var(--yellow);line-height:1.6;
-  display:none;
+  font-size:10px;color:var(--yellow);line-height:1.7;display:none;
 }
-.warn-banner.show{display:block}
-
-@media(max-width:700px){
-  .layout{grid-template-columns:1fr}.sidebar{display:none}
-  .sgrid{grid-template-columns:1fr 1fr}
-  .c4{grid-template-columns:1fr 1fr}.c3{grid-template-columns:1fr}
-}
-
-/* ── Font import (optional, fallback to monospace) ── */
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&display=swap');
+.conn-banner.show{display:block}
+@media(max-width:680px){.layout{grid-template-columns:1fr}.sidebar{display:none}.sgrid{grid-template-columns:1fr 1fr}.c4{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
@@ -265,67 +167,72 @@ tr:hover td{background:rgba(255,255,255,.02)}
 <!-- TOPBAR -->
 <div class="topbar">
   <div class="brand">
-    <span class="brand-dot" id="live-dot"></span>
+    <span class="pulse off" id="pulse"></span>
     ATTAMATION · FINGERPRINT ATTENDANCE
   </div>
-  <div class="topinfo">
-    <input id="ip-config" value="192.168.x.x" title="IP Address ESP32 — klik untuk ubah" onchange="setEspIP(this.value)" onkeydown="if(event.key==='Enter')setEspIP(this.value)">
-    <div class="status-pill" id="pill-wifi"><span class="dot"></span><span id="pill-wifi-lbl">WiFi</span></div>
-    <div class="status-pill" id="pill-mqtt"><span class="dot"></span><span id="pill-mqtt-lbl">MQTT</span></div>
+  <div class="topright">
+    <div class="pill" id="pill-wifi"><span class="d"></span><span id="pill-wifi-lbl">WiFi</span></div>
+    <div class="pill" id="pill-mqtt"><span class="d"></span><span id="pill-mqtt-lbl">MQTT</span></div>
     <span class="topclk" id="clk">--:--:--</span>
-    <span class="live-ind"><span class="live-dot"></span>LIVE</span>
+    <span style="font-size:9px;color:var(--text3)"><span class="live-dot" id="ldot" style="background:#333;animation:none"></span>LIVE</span>
   </div>
 </div>
 
 <div class="layout">
 <!-- SIDEBAR -->
 <nav class="sidebar">
-  <div style="padding:12px 16px 6px;font-size:9px;color:var(--text3);letter-spacing:.1em">PANEL KONTROL</div>
+  <div style="padding:10px 14px 5px;font-size:8px;color:var(--text3);letter-spacing:.1em">PANEL KONTROL</div>
   <div class="nsec">DASHBOARD</div>
-  <div class="nitem on" onclick="go('dash',this)"><span class="ico">◈</span> Overview</div>
+  <div class="nitem on" onclick="go('dash',this)"><span class="ic">◈</span> Overview</div>
   <div class="nsec">KARYAWAN</div>
-  <div class="nitem" onclick="go('emp',this)"><span class="ico">◉</span> Daftar Karyawan</div>
-  <div class="nitem" onclick="go('enroll',this)"><span class="ico">⊕</span> Enroll Jari</div>
+  <div class="nitem" onclick="go('emp',this)"><span class="ic">◉</span> Daftar Karyawan</div>
+  <div class="nitem" onclick="go('enroll',this)"><span class="ic">⊕</span> Enroll Jari</div>
   <div class="nsec">LAPORAN</div>
-  <div class="nitem" onclick="go('logs',this)"><span class="ico">◎</span> Log Absensi</div>
-  <div class="nitem" onclick="go('emerg',this)"><span class="ico">⚠</span> Log Tidak Sesuai</div>
-  <div class="nitem" onclick="go('allact',this)"><span class="ico">≡</span> All Activity</div>
+  <div class="nitem" onclick="go('logs',this)"><span class="ic">≡</span> Log Absensi</div>
+  <div class="nitem" onclick="go('emerg',this)"><span class="ic">⚠</span> Log Tidak Sesuai</div>
   <div class="nsec">SISTEM</div>
-  <div class="nitem" onclick="go('settings',this)"><span class="ico">⚙</span> Pengaturan</div>
-  <div class="nitem" style="color:var(--red)" onclick="confirmResetFingers()"><span class="ico">✕</span> Reset Semua Jari</div>
+  <div class="nitem" onclick="go('settings',this)"><span class="ic">⚙</span> Pengaturan</div>
+  <div class="nitem" style="color:var(--red)" onclick="cmdReset()"><span class="ic">✕</span> Reset Semua Jari</div>
 </nav>
 
 <main class="main">
 
-<!-- ── BANNER: ESP32 tidak terhubung ── -->
-<div class="warn-banner" id="warn-noconn">
-  ⚠ Tidak dapat terhubung ke ESP32 di <strong id="warn-ip">—</strong>.
-  Pastikan ESP32 menyala dan berada di jaringan yang sama, atau ubah IP di kolom atas kanan.
+<div class="conn-banner" id="banner-disconn">
+  ⚠ MQTT tidak terhubung. Dashboard sedang mencoba menghubungkan ke broker...
+  Data akan muncul secara otomatis saat terhubung.
 </div>
 
-<!-- ── DASHBOARD ── -->
+<!-- DASHBOARD -->
 <div class="pg on" id="pg-dash">
   <div class="ptitle">Overview</div>
-  <div class="psub">STATUS SISTEM ABSENSI REALTIME</div>
+  <div class="psub">STATUS SISTEM ABSENSI REALTIME via MQTT</div>
   <div class="sgrid">
-    <div class="scard"><div class="slabel">TOTAL KARYAWAN</div><div class="sval b" id="s-tot">—</div></div>
-    <div class="scard"><div class="slabel">AKTIF</div><div class="sval g" id="s-act">—</div></div>
-    <div class="scard"><div class="slabel">NONAKTIF</div><div class="sval r" id="s-inact">—</div></div>
-    <div class="scard"><div class="slabel">LOG HARI INI</div><div class="sval" id="s-today">—</div></div>
+    <div class="scard"><div class="slbl">TOTAL KARYAWAN</div><div class="sval b" id="s-tot">—</div></div>
+    <div class="scard"><div class="slbl">AKTIF</div><div class="sval g" id="s-act">—</div></div>
+    <div class="scard"><div class="slbl">NONAKTIF</div><div class="sval r" id="s-inact">—</div></div>
+    <div class="scard"><div class="slbl">LOG HARI INI</div><div class="sval" id="s-today">—</div></div>
   </div>
   <div class="card">
     <div class="ch">
       <span class="ct">LOG TERBARU</span>
-      <span class="live-ind"><span class="live-dot"></span>AUTO REFRESH</span>
+      <span style="font-size:8px;color:var(--text3)"><span class="live-dot"></span>REALTIME</span>
     </div>
     <div style="padding:0">
       <table><thead><tr><th>WAKTU</th><th>NAMA</th><th>AKTIVITAS</th><th>STATUS</th></tr></thead>
-      <tbody id="dash-log"><tr><td colspan="4" class="emp-cell">Menghubungkan...</td></tr></tbody></table>
+      <tbody id="dash-log"><tr><td colspan="4" class="emp-cell">Menunggu data dari ESP32...</td></tr></tbody></table>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ch"><span class="ct">STATUS ESP32</span></div>
+    <div class="cb" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;font-size:10px">
+      <div><div style="color:var(--text3);font-size:8px;letter-spacing:.1em;margin-bottom:3px">JAM ESP32</div><div id="esp-time" style="font-weight:700;font-family:monospace">--:--:--</div></div>
+      <div><div style="color:var(--text3);font-size:8px;letter-spacing:.1em;margin-bottom:3px">TANGGAL</div><div id="esp-date" style="font-weight:700;font-family:monospace">--/--/----</div></div>
+      <div><div style="color:var(--text3);font-size:8px;letter-spacing:.1em;margin-bottom:3px">LAST HEARTBEAT</div><div id="esp-beat" style="font-weight:700;font-family:monospace">—</div></div>
     </div>
   </div>
 </div>
 
-<!-- ── KARYAWAN ── -->
+<!-- KARYAWAN -->
 <div class="pg" id="pg-emp">
   <div class="ptitle">Daftar Karyawan</div>
   <div class="psub">KELOLA DATA, JADWAL, IZIN, DAN STATUS</div>
@@ -337,29 +244,29 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <th>ISTIRAHAT</th><th>IZIN TUGAS</th><th>IZIN TINGGAL</th>
         <th>STATUS</th><th>AKSI</th>
       </tr></thead>
-      <tbody id="emp-tb"><tr><td colspan="9" class="emp-cell">Menghubungkan...</td></tr></tbody></table>
+      <tbody id="emp-tb"><tr><td colspan="9" class="emp-cell">Menunggu data ESP32...</td></tr></tbody></table>
     </div>
   </div>
 </div>
 
-<!-- ── ENROLL ── -->
+<!-- ENROLL -->
 <div class="pg" id="pg-enroll">
   <div class="ptitle">Enroll Jari</div>
-  <div class="psub">DAFTARKAN SIDIK JARI BARU</div>
+  <div class="psub">DAFTARKAN SIDIK JARI VIA MQTT COMMAND</div>
   <div class="card">
     <div class="ch"><span class="ct">PROSES ENROLL</span></div>
     <div class="cb">
       <div class="ebox" id="ebox">
         <div class="eicon">◈</div>
         <div class="etitle">Siap Mendaftarkan Jari</div>
-        <div class="esub">Klik tombol di bawah lalu ikuti instruksi di layar OLED Arduino.</div>
-        <div style="margin-top:20px"><button class="btn bp" onclick="startEnroll()">MULAI ENROLL</button></div>
+        <div class="esub">Klik tombol → perintah dikirim ke ESP32 via MQTT.<br>Ikuti instruksi di layar OLED Arduino.</div>
+        <div style="margin-top:18px"><button class="btn bp" onclick="cmdEnroll()">MULAI ENROLL</button></div>
       </div>
-      <div id="eresult" style="display:none;margin-top:18px">
-        <div class="ct" style="margin-bottom:12px;color:var(--text2)">DATA KARYAWAN BARU</div>
+      <div id="eresult" style="display:none;margin-top:16px">
+        <div class="ct" style="margin-bottom:10px;color:var(--text2)">EDIT DATA KARYAWAN BARU</div>
         <div class="frow c2">
           <div class="fg"><label>ID FINGERPRINT</label><input id="nid" readonly></div>
-          <div class="fg"><label>NAMA KARYAWAN</label><input id="nname" placeholder="Masukkan nama..."></div>
+          <div class="fg"><label>NAMA</label><input id="nname" placeholder="Masukkan nama..."></div>
         </div>
         <div class="frow c4">
           <div class="fg"><label>JAM MASUK</label><input type="time" id="nin" value="08:00"></div>
@@ -367,8 +274,8 @@ tr:hover td{background:rgba(255,255,255,.02)}
           <div class="fg"><label>MULAI ISTIRAHAT</label><input type="time" id="nbrin" value="12:00"></div>
           <div class="fg"><label>SELESAI ISTIRAHAT</label><input type="time" id="nbrout" value="13:00"></div>
         </div>
-        <div class="flex gap8 mt16">
-          <button class="btn bg2" onclick="saveNewEmp()">SIMPAN KARYAWAN</button>
+        <div class="flex gap8 mt12">
+          <button class="btn bg2" onclick="saveNewEmp()">SIMPAN</button>
           <button class="btn bo" onclick="resetEnroll()">BATAL</button>
         </div>
       </div>
@@ -376,12 +283,15 @@ tr:hover td{background:rgba(255,255,255,.02)}
   </div>
 </div>
 
-<!-- ── LOG ABSENSI ── -->
+<!-- LOG -->
 <div class="pg" id="pg-logs">
   <div class="ptitle">Log Absensi</div>
-  <div class="psub">RIWAYAT ABSENSI SEMUA KARYAWAN</div>
+  <div class="psub">RIWAYAT ABSENSI REALTIME</div>
   <div class="card">
-    <div class="ch"><span class="ct">RIWAYAT</span></div>
+    <div class="ch">
+      <span class="ct">RIWAYAT</span>
+      <button class="btn bo bsm" onclick="cmdGetLogs()">⟳ REFRESH</button>
+    </div>
     <div style="padding:0;overflow-x:auto">
       <table><thead><tr><th>WAKTU</th><th>NAMA</th><th>ID</th><th>AKTIVITAS</th><th>STATUS</th></tr></thead>
       <tbody id="log-tb"><tr><td colspan="5" class="emp-cell">Belum ada data</td></tr></tbody></table>
@@ -389,10 +299,10 @@ tr:hover td{background:rgba(255,255,255,.02)}
   </div>
 </div>
 
-<!-- ── LOG MASALAH ── -->
+<!-- LOG MASALAH -->
 <div class="pg" id="pg-emerg">
   <div class="ptitle">Log Tidak Sesuai</div>
-  <div class="psub">ABSENSI DARURAT, TERLAMBAT, DAN JADWAL TIDAK SESUAI</div>
+  <div class="psub">TERLAMBAT, DARURAT, JADWAL TIDAK SESUAI</div>
   <div class="card">
     <div class="ch"><span class="ct">LOG MASALAH</span></div>
     <div style="padding:0;overflow-x:auto">
@@ -402,71 +312,48 @@ tr:hover td{background:rgba(255,255,255,.02)}
   </div>
 </div>
 
-<!-- ── ALL ACTIVITY ── -->
-<div class="pg" id="pg-allact">
-  <div class="ptitle">All Activity</div>
-  <div class="psub">SEMUA AKTIVITAS SENSOR — TERMASUK YANG DIBLOKIR</div>
-  <div class="card">
-    <div class="ch">
-      <span class="ct">RAW ACTIVITY LOG</span>
-      <span style="font-size:9px;color:var(--text3);letter-spacing:.05em">MAX 300 ENTRI TERBARU</span>
-    </div>
-    <div style="padding:0;overflow-x:auto">
-      <table><thead><tr><th>WAKTU</th><th>NAMA</th><th>ID</th><th>MENU</th><th>HASIL</th></tr></thead>
-      <tbody id="allact-tb"><tr><td colspan="5" class="emp-cell">Belum ada aktivitas</td></tr></tbody></table>
-    </div>
-  </div>
-</div>
-
-<!-- ── SETTINGS ── -->
+<!-- SETTINGS -->
 <div class="pg" id="pg-settings">
   <div class="ptitle">Pengaturan</div>
-  <div class="psub">KONFIGURASI JAM DAN SISTEM</div>
+  <div class="psub">KONFIGURASI SISTEM via MQTT</div>
   <div class="card">
-    <div class="ch"><span class="ct">SET JAM MANUAL</span></div>
+    <div class="ch"><span class="ct">SET JAM ESP32</span></div>
     <div class="cb">
       <div class="frow c3">
         <div class="fg"><label>TANGGAL</label><input type="date" id="set-date"></div>
         <div class="fg"><label>JAM</label><input type="time" id="set-time"></div>
         <div class="fg" style="display:flex;align-items:flex-end">
-          <button class="btn bp" style="width:100%;justify-content:center" onclick="setTime()">SET JAM</button>
+          <button class="btn bp" style="width:100%;justify-content:center" onclick="cmdSetTime()">SET JAM</button>
         </div>
       </div>
       <div style="margin-top:8px;font-size:10px;color:var(--text3)">
         Jam ESP32 sekarang: <strong id="cur-time" style="color:var(--text2)">--:--:--</strong>
         &nbsp;·&nbsp; <span id="cur-date">--/--/----</span>
+        <span style="margin-left:10px;color:var(--green);font-size:9px">NTP auto-sync tiap 1 jam</span>
       </div>
     </div>
   </div>
 
-  <div class="card" style="margin-top:16px">
-    <div class="ch"><span class="ct">KONEKSI ESP32</span></div>
-    <div class="cb">
-      <div class="frow c2">
-        <div class="fg"><label>IP ADDRESS ESP32</label>
-          <input id="set-ip" placeholder="192.168.x.x">
-        </div>
-        <div class="fg" style="display:flex;align-items:flex-end">
-          <button class="btn bp" style="width:100%;justify-content:center" onclick="applyIP()">TERAPKAN IP</button>
-        </div>
-      </div>
-      <div style="font-size:10px;color:var(--text3);margin-top:6px;line-height:1.8">
-        IP tersimpan di browser lokal. Dashboard ini di-host di GitHub Pages dan berkomunikasi langsung dengan ESP32 via REST API.<br>
-        Pastikan perangkat Anda berada di jaringan yang sama dengan ESP32.
-      </div>
+  <div class="card" style="margin-top:14px">
+    <div class="ch"><span class="ct">KONEKSI MQTT</span></div>
+    <div class="cb" style="font-size:10px;color:var(--text3);line-height:1.8">
+      Broker: <strong style="color:var(--text2)">HiveMQ Cloud (TLS)</strong><br>
+      Status: <strong id="mqtt-status-text" style="color:var(--yellow)">Menghubungkan...</strong><br>
+      Dashboard ini berkomunikasi langsung dengan broker MQTT.<br>
+      Data masuk realtime tanpa perlu IP ESP32.
     </div>
   </div>
 
-  <div class="card" style="margin-top:16px;border-color:rgba(229,57,53,.3)">
-    <div class="ch" style="background:rgba(229,57,53,.05)">
-      <span class="ct" style="color:var(--red)">⚠ RESET SEMUA JARI &amp; DATA KARYAWAN</span>
+  <div class="card" style="margin-top:14px;border-color:rgba(229,57,53,.2)">
+    <div class="ch" style="background:rgba(229,57,53,.04)">
+      <span class="ct" style="color:var(--red)">⚠ RESET SEMUA JARI</span>
     </div>
     <div class="cb">
-      <div style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.7">
-        Hapus <strong>seluruh data jari</strong> dari sensor fingerprint sekaligus semua data karyawan.<br>
-        <span style="color:var(--red);font-weight:700">⚠ Tidak dapat dibatalkan. Semua karyawan harus enroll ulang.</span>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:12px;line-height:1.7">
+        Hapus seluruh data jari dari sensor sekaligus semua karyawan.<br>
+        <span style="color:var(--red);font-weight:700">Tidak bisa dibatalkan.</span>
       </div>
-      <button class="btn br2" onclick="confirmResetFingers()">✕ RESET SEMUA JARI &amp; DATA</button>
+      <button class="btn br2" onclick="cmdReset()">✕ RESET SEMUA JARI &amp; DATA</button>
     </div>
   </div>
 </div>
@@ -474,7 +361,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 </main>
 </div><!-- end layout -->
 
-<!-- ── MODAL EDIT KARYAWAN ── -->
+<!-- MODAL EDIT -->
 <div class="moverlay" id="medit">
   <div class="modal">
     <div class="mh"><span class="mt">EDIT KARYAWAN</span><button class="mx" onclick="closeMod('medit')">✕</button></div>
@@ -493,262 +380,376 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <div class="fg"><label>SELESAI ISTIRAHAT</label><input type="time" id="ebrout"></div>
       </div>
       <hr class="msep">
-      <div class="mlabel">IZIN TUGAS KELUAR (MENU 4)</div>
+      <div class="mlbl">IZIN TUGAS KELUAR (MENU 4)</div>
       <div class="izin-row">
         <input type="checkbox" id="eit-aktif">
-        <label for="eit-aktif" style="font-size:11px;color:var(--text2)">Aktifkan Izin Tugas</label>
-        <div class="fg" style="flex:1;margin-top:0">
-          <label>JAM BERANGKAT</label>
-          <input type="time" id="eit-jam">
-        </div>
+        <label for="eit-aktif" style="font-size:10px;color:var(--text2)">Aktifkan Izin Tugas</label>
+        <div class="fg" style="flex:1;margin-top:0"><label>JAM</label><input type="time" id="eit-jam"></div>
       </div>
       <hr class="msep">
-      <div class="mlabel">IZIN TINGGALKAN TEMPAT (MENU 5)</div>
+      <div class="mlbl">IZIN TINGGALKAN (MENU 5)</div>
       <div class="izin-row">
         <input type="checkbox" id="etn-aktif">
-        <label for="etn-aktif" style="font-size:11px;color:var(--text2)">Aktifkan Izin Tinggal</label>
-        <div class="fg" style="flex:1;margin-top:0">
-          <label>JAM MENINGGALKAN</label>
-          <input type="time" id="etn-jam">
-        </div>
+        <label for="etn-aktif" style="font-size:10px;color:var(--text2)">Aktifkan Izin Tinggal</label>
+        <div class="fg" style="flex:1;margin-top:0"><label>JAM</label><input type="time" id="etn-jam"></div>
       </div>
     </div>
     <div class="mf">
       <button class="btn bo" onclick="closeMod('medit')">BATAL</button>
-      <button class="btn bp" onclick="saveEdit()">SIMPAN</button>
+      <button class="btn bp" onclick="saveEdit()">KIRIM KE ESP32</button>
     </div>
   </div>
 </div>
 
 <div id="toast"></div>
 
-<!-- ============================================================
-     JAVASCRIPT
-============================================================ -->
+<!-- =========================================================
+     JAVASCRIPT — MQTT via WebSocket
+========================================================= -->
 <script>
-// ── Config ──────────────────────────────────────────────────
-var ESP_IP = localStorage.getItem('esp_ip') || '192.168.0.245';
-var curPage = 'dash';
-var employees = [];
-var autoRefTmr = null;
-var enrollTmr  = null;
+// ── MQTT Config ─────────────────────────────────────────────
+var MQTT_HOST = "wss://67661be755b84a34a1f9b92d9dbff62c.s1.eu.hivemq.cloud:8884/mqtt";
+var MQTT_USER = "Finger_System";
+var MQTT_PASS = "Atamation21";
 
-function getBase(){ return 'http://'+ESP_IP; }
+// ── State ────────────────────────────────────────────────────
+var employees  = [];
+var logEntries = [];
+var mqttConn   = false;
+var client     = null;
+var curPage    = 'dash';
+var enrollWait = false;
+var lastBeatMs = 0;
 
-// Update IP display
-function updateIpDisplay(){
-  document.getElementById('ip-config').value = ESP_IP;
-  var si = document.getElementById('set-ip');
-  if(si) si.value = ESP_IP;
+// ── MQTT Connect ─────────────────────────────────────────────
+function mqttConnect(){
+  var cid = "dash_" + Math.random().toString(16).slice(2,8);
+  client = mqtt.connect(MQTT_HOST, {
+    clientId:  cid,
+    username:  MQTT_USER,
+    password:  MQTT_PASS,
+    clean:     true,
+    reconnectPeriod: 3000,
+    connectTimeout:  8000,
+  });
+
+  client.on('connect', function(){
+    mqttConn = true;
+    setPill('pill-mqtt','ok','MQTT OK');
+    setPill('pill-wifi','ok','Online');
+    document.getElementById('pulse').className='pulse';
+    document.getElementById('ldot').style.cssText='background:var(--green);';
+    document.getElementById('mqtt-status-text').textContent='Terhubung';
+    document.getElementById('mqtt-status-text').style.color='var(--green)';
+    document.getElementById('banner-disconn').className='conn-banner';
+    toast('MQTT terhubung ✓','tg');
+
+    // Subscribe semua topic
+    client.subscribe('absensi/#');
+
+    // Minta data saat baru konek
+    mqttPublish('absensi/cmd','{"cmd":"getemployees"}');
+    mqttPublish('absensi/cmd','{"cmd":"getlogs"}');
+  });
+
+  client.on('close', function(){
+    mqttConn = false;
+    setPill('pill-mqtt','err','MQTT --');
+    setPill('pill-wifi','warn','Disconnected');
+    document.getElementById('pulse').className='pulse off';
+    document.getElementById('ldot').style.cssText='background:#333;animation:none';
+    document.getElementById('mqtt-status-text').textContent='Terputus — reconnecting...';
+    document.getElementById('mqtt-status-text').style.color='var(--yellow)';
+    document.getElementById('banner-disconn').className='conn-banner show';
+  });
+
+  client.on('error', function(err){
+    console.error('MQTT error:', err);
+  });
+
+  client.on('message', function(topic, message){
+    try{
+      var payload = JSON.parse(message.toString());
+      handleMqttMessage(topic, payload, message.toString());
+    } catch(e){
+      console.warn('Invalid JSON on', topic, message.toString());
+    }
+  });
 }
-updateIpDisplay();
 
-function setEspIP(v){
-  v = v.trim();
-  if(!v) return;
-  ESP_IP = v;
-  localStorage.setItem('esp_ip', v);
-  updateIpDisplay();
-  toast('IP diubah ke '+v);
-  pollStatus();
-}
-function applyIP(){
-  var v = document.getElementById('set-ip').value.trim();
-  if(v) setEspIP(v);
+function mqttPublish(topic, payloadStr){
+  if(!client || !mqttConn) return;
+  client.publish(topic, payloadStr);
 }
 
-// ── API helper ───────────────────────────────────────────────
-async function api(path, opts){
-  try{
-    var url = getBase()+path;
-    var r = await fetch(url,{
-      ...opts,
-      headers:{'Content-Type':'application/x-www-form-urlencoded'},
-      mode:'cors',
-      signal: AbortSignal.timeout(6000)
-    });
-    return await r.json();
-  }catch(e){ return null; }
+// ── MQTT Message Handler ─────────────────────────────────────
+function handleMqttMessage(topic, data, raw){
+  if(topic === 'absensi/heartbeat'){
+    // Update jam ESP32 dari heartbeat
+    document.getElementById('esp-time').textContent = data.time || '--:--:--';
+    document.getElementById('esp-date').textContent = data.date || '--/--/----';
+    document.getElementById('cur-time').textContent = data.time || '--:--:--';
+    document.getElementById('cur-date').textContent = data.date || '--/--/----';
+    document.getElementById('esp-beat').textContent = new Date().toTimeString().slice(0,8);
+    lastBeatMs = Date.now();
+    return;
+  }
+
+  if(topic === 'absensi/employees'){
+    // Bisa berupa array atau single event
+    if(Array.isArray(data)){
+      employees = data;
+      renderEmployees();
+      updateStats();
+    }
+    return;
+  }
+
+  if(topic === 'absensi/log'){
+    // Absensi baru masuk realtime
+    logEntries.unshift(data);
+    if(logEntries.length > 200) logEntries.pop();
+    renderLogs();
+    updateStats();
+    // Flash notifikasi
+    toast('Absensi: '+data.name+' — '+data.status,'tg');
+    return;
+  }
+
+  if(topic === 'absensi/logs'){
+    // Bulk logs dari cmd getlogs
+    if(Array.isArray(data)){
+      // Merge dengan yang sudah ada
+      data.forEach(function(l){
+        if(!logEntries.find(function(x){return x.dt===l.dt&&x.id===l.id&&x.menu===l.menu;})){
+          logEntries.push(l);
+        }
+      });
+      logEntries.sort(function(a,b){return b.dt.localeCompare(a.dt);});
+      if(logEntries.length>200) logEntries.length=200;
+      renderLogs();
+      updateStats();
+    }
+    return;
+  }
+
+  if(topic === 'absensi/allact'){
+    // Aktivitas sensor (termasuk yang diblokir) — hanya untuk tampilan realtime
+    if(curPage==='dash' || curPage==='logs'){
+      // sudah di-handle via absensi/log untuk yang berhasil
+    }
+    return;
+  }
 }
 
 // ── Navigation ───────────────────────────────────────────────
 function go(name,el){
-  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
-  document.querySelectorAll('.nitem').forEach(n=>n.classList.remove('on'));
+  document.querySelectorAll('.pg').forEach(function(p){p.classList.remove('on');});
+  document.querySelectorAll('.nitem').forEach(function(n){n.classList.remove('on');});
   document.getElementById('pg-'+name).classList.add('on');
   if(el) el.classList.add('on');
-  curPage = name;
-  if(name==='emp')   loadEmp();
-  if(name==='logs')  loadLogs();
-  if(name==='emerg') loadLogs();
-  if(name==='allact')loadAllActivity();
-  if(name==='dash')  {loadEmp();loadLogs();}
-  if(name==='settings') refreshCurTime();
+  curPage=name;
 }
 
 // ── Toast ────────────────────────────────────────────────────
 function toast(m,t){
   var el=document.getElementById('toast');
   el.textContent=m; el.className='show '+(t||'');
-  clearTimeout(el._t); el._t=setTimeout(()=>el.className='',3000);
+  clearTimeout(el._t); el._t=setTimeout(function(){el.className='';},3000);
 }
 
-// ── Status poll ──────────────────────────────────────────────
-var connOk = false;
-async function pollStatus(){
-  var d = await api('/api/status');
-  var warnEl = document.getElementById('warn-noconn');
-  document.getElementById('warn-ip').textContent = ESP_IP;
-
-  if(!d){
-    connOk = false;
-    document.getElementById('live-dot').className='brand-dot off';
-    setPill('pill-wifi','err','WIFI ERR');
-    setPill('pill-mqtt','err','MQTT ERR');
-    warnEl.className='warn-banner show';
-    return;
-  }
-  connOk = true;
-  warnEl.className='warn-banner';
-  document.getElementById('live-dot').className='brand-dot';
-  document.getElementById('clk').textContent = d.time;
-
-  setPill('pill-wifi', d.wifi?'ok':'warn', d.wifi?'WiFi OK':'WiFi --');
-  setPill('pill-mqtt', d.mqtt?'ok':'warn', d.mqtt?'MQTT OK':'MQTT --');
-}
+// ── Pills ─────────────────────────────────────────────────────
 function setPill(id,cls,lbl){
   var el=document.getElementById(id);
-  el.className='status-pill '+cls;
+  el.className='pill '+cls;
   el.querySelector('span:last-child').textContent=lbl;
 }
 
-setInterval(pollStatus,4000);
-pollStatus();
-
-// Local clock
-setInterval(()=>{
-  var s=new Date().toTimeString().slice(0,8);
-  var el=document.getElementById('clk');
-  if(el.textContent==='--:--:--') el.textContent=s;
+// ── Clock ─────────────────────────────────────────────────────
+setInterval(function(){
+  document.getElementById('clk').textContent=new Date().toTimeString().slice(0,8);
+  // Cek heartbeat timeout (>15 detik = ESP32 offline)
+  if(lastBeatMs>0 && Date.now()-lastBeatMs>15000){
+    document.getElementById('esp-beat').style.color='var(--red)';
+  } else {
+    document.getElementById('esp-beat').style.color='';
+  }
 },1000);
 
-// ── Auto refresh ─────────────────────────────────────────────
-function startAutoRefresh(){
-  if(autoRefTmr) clearInterval(autoRefTmr);
-  autoRefTmr = setInterval(()=>{
-    if(curPage==='dash'){loadEmp();loadLogs();}
-    else if(curPage==='emp')    loadEmp();
-    else if(curPage==='logs')   loadLogs();
-    else if(curPage==='emerg')  loadLogs();
-    else if(curPage==='allact') loadAllActivity();
-    else if(curPage==='settings') refreshCurTime();
-  },5000);
+// ── Stats ─────────────────────────────────────────────────────
+function updateStats(){
+  document.getElementById('s-tot').textContent=employees.length||'—';
+  var act=employees.filter(function(e){return e.enabled;}).length;
+  document.getElementById('s-act').textContent=employees.length?act:'—';
+  document.getElementById('s-inact').textContent=employees.length?(employees.length-act):'—';
+  var today=new Date().toISOString().slice(0,10);
+  var t=logEntries.filter(function(l){return l.dt&&l.dt.startsWith(today);}).length;
+  document.getElementById('s-today').textContent=t||'0';
 }
-startAutoRefresh();
 
 // ── Badge helpers ─────────────────────────────────────────────
 var menuColor={1:'bb',2:'bg',3:'by',4:'bgr',5:'bgr',6:'br'};
-function mbadge(menu,name){
-  return'<span class="badge '+(menuColor[menu]||'bgr')+'">'+name+'</span>';
-}
+function mbadge(menu,name){return '<span class="badge '+(menuColor[menu]||'bgr')+'">'+name+'</span>';}
 function sbadge(s){
-  if(!s||s==='TEPAT')    return'<span class="badge bg">TEPAT</span>';
-  if(s==='TERLAMBAT')    return'<span class="badge by">TERLAMBAT</span>';
-  if(s==='TDK SESUAI'||s==='JADWAL TDK SESUAI') return'<span class="badge bor">TDK SESUAI</span>';
-  if(s==='DARURAT')      return'<span class="badge br">DARURAT</span>';
-  if(s==='DIBLOKIR')     return'<span class="badge br">DIBLOKIR</span>';
-  if(s==='NONAKTIF')     return'<span class="badge br">NONAKTIF</span>';
-  return'<span class="badge bgr">'+s+'</span>';
+  if(!s||s==='TEPAT')   return '<span class="badge bg">TEPAT</span>';
+  if(s==='TERLAMBAT')   return '<span class="badge by">TERLAMBAT</span>';
+  if(s==='TDK SESUAI')  return '<span class="badge bor">TDK SESUAI</span>';
+  if(s==='DARURAT')     return '<span class="badge br">DARURAT</span>';
+  if(s==='DIBLOKIR')    return '<span class="badge br">DIBLOKIR</span>';
+  if(s==='NONAKTIF')    return '<span class="badge br">NONAKTIF</span>';
+  return '<span class="badge bgr">'+s+'</span>';
 }
 function timeCell(dt){
-  return`<td style="font-family:monospace;font-size:10px;white-space:nowrap">
-    ${dt.slice(11,19)} <span style="color:var(--text3)">${dt.slice(0,10)}</span></td>`;
+  if(!dt) return '<td>—</td>';
+  return '<td style="font-family:monospace;font-size:10px;white-space:nowrap">'+
+    dt.slice(11,19)+' <span style="color:var(--text3)">'+dt.slice(0,10)+'</span></td>';
 }
 
-// ── Load Employees ────────────────────────────────────────────
-async function loadEmp(){
-  var d=await api('/api/employees');
-  if(!d){
-    document.getElementById('emp-tb').innerHTML='<tr><td colspan="9" class="emp-cell">Tidak dapat terhubung ke ESP32</td></tr>';
-    return;
-  }
-  employees=d;
-  document.getElementById('s-tot').textContent=d.length;
-  var act=d.filter(e=>e.enabled).length;
-  document.getElementById('s-act').textContent=act;
-  document.getElementById('s-inact').textContent=d.length-act;
+// ── Render Employees ──────────────────────────────────────────
+function renderEmployees(){
   var tb=document.getElementById('emp-tb');
-  if(!d.length){tb.innerHTML='<tr><td colspan="9" class="emp-cell">Belum ada karyawan terdaftar</td></tr>';return;}
-  tb.innerHTML=d.map(e=>`<tr>
-    <td style="font-family:monospace;font-weight:700;color:#64b5f6">#${e.id}</td>
-    <td style="font-weight:700">${e.name}</td>
-    <td style="font-family:monospace">${e.inTime}</td>
-    <td style="font-family:monospace">${e.outTime}</td>
-    <td style="font-family:monospace;font-size:10px;color:var(--text3)">${e.breakIn}–${e.breakOut}</td>
-    <td style="font-size:10px">${e.izinTugas?'<span class="badge bg">'+e.izinTugasJam+'</span>':'<span class="badge bgr">—</span>'}</td>
-    <td style="font-size:10px">${e.izinTinggal?'<span class="badge bb">'+e.izinTinggalJam+'</span>':'<span class="badge bgr">—</span>'}</td>
-    <td><span class="badge ${e.enabled?'bg':'br'}">${e.enabled?'AKTIF':'NONAKTIF'}</span></td>
-    <td><div class="flex gap8">
-      <button class="btn bo bsm" onclick="openEdit(${e.id})">EDIT</button>
-      <button class="btn bsm ${e.enabled?'br2':'bg2'}" onclick="toggleEmp(${e.id})">${e.enabled?'DISABLE':'ENABLE'}</button>
-      <button class="btn bo bsm" style="color:var(--red)" onclick="delEmp(${e.id},'${e.name.replace(/'/g,"\\'")}')">HAPUS</button>
-    </div></td>
-  </tr>`).join('');
+  if(!employees.length){tb.innerHTML='<tr><td colspan="9" class="emp-cell">Belum ada karyawan</td></tr>';return;}
+  tb.innerHTML=employees.map(function(e){
+    return '<tr>'+
+      '<td style="font-family:monospace;font-weight:700;color:var(--blue)">#'+e.id+'</td>'+
+      '<td style="font-weight:700">'+e.name+'</td>'+
+      '<td style="font-family:monospace">'+e.inTime+'</td>'+
+      '<td style="font-family:monospace">'+e.outTime+'</td>'+
+      '<td style="font-family:monospace;font-size:10px;color:var(--text3)">'+e.breakIn+'–'+e.breakOut+'</td>'+
+      '<td>'+(e.izinTugas?'<span class="badge bg">'+e.izinTugasJam+'</span>':'<span class="badge bgr">—</span>')+'</td>'+
+      '<td>'+(e.izinTinggal?'<span class="badge bb">'+e.izinTinggalJam+'</span>':'<span class="badge bgr">—</span>')+'</td>'+
+      '<td><span class="badge '+(e.enabled?'bg':'br')+'">'+(e.enabled?'AKTIF':'NONAKTIF')+'</span></td>'+
+      '<td><div class="flex gap8">'+
+        '<button class="btn bo bsm" onclick="openEdit('+e.id+')">EDIT</button>'+
+        '<button class="btn bsm '+(e.enabled?'br2':'bg2')+'" onclick="cmdToggle('+e.id+')">'+(e.enabled?'DISABLE':'ENABLE')+'</button>'+
+        '<button class="btn bo bsm" style="color:var(--red)" onclick="cmdDelete('+e.id+',\''+e.name.replace(/'/g,"\\'")+'\')" >HAPUS</button>'+
+      '</div></td>'+
+    '</tr>';
+  }).join('');
 }
 
-// ── Load Logs ─────────────────────────────────────────────────
-async function loadLogs(){
-  var d=await api('/api/logs');
-  if(!d) return;
-  var today=new Date().toISOString().slice(0,10);
-  document.getElementById('s-today').textContent=d.filter(l=>l.dt.startsWith(today)).length;
+// ── Render Logs ───────────────────────────────────────────────
+function renderLogs(){
+  var mn={1:'Masuk Kerja',2:'Pulang Kerja',3:'Istirahat',4:'Izin Tugas',5:'Izin Tinggal',6:'Darurat'};
 
+  // Dashboard: 10 terbaru
   var dash=document.getElementById('dash-log');
-  dash.innerHTML=d.slice(0,10).map(l=>`<tr>
-    ${timeCell(l.dt)}
-    <td style="font-weight:700">${l.name}</td>
-    <td>${mbadge(l.menu,l.menuName)}</td>
-    <td>${sbadge(l.status)}</td>
-  </tr>`).join('')||'<tr><td colspan="4" class="emp-cell">Belum ada aktivitas hari ini</td></tr>';
+  var top10=logEntries.slice(0,10);
+  dash.innerHTML=top10.map(function(l){
+    return '<tr>'+timeCell(l.dt)+'<td style="font-weight:700">'+l.name+'</td>'+
+      '<td>'+mbadge(l.menu,l.menuName||mn[l.menu]||'?')+'</td>'+
+      '<td>'+sbadge(l.status)+'</td></tr>';
+  }).join('')||'<tr><td colspan="4" class="emp-cell">Belum ada aktivitas</td></tr>';
 
+  // Log lengkap
   var ltb=document.getElementById('log-tb');
-  ltb.innerHTML=d.map(l=>`<tr>
-    ${timeCell(l.dt)}
-    <td style="font-weight:700">${l.name}</td>
-    <td style="font-family:monospace;color:var(--text3)">#${l.id}</td>
-    <td>${mbadge(l.menu,l.menuName)}</td>
-    <td>${sbadge(l.status)}</td>
-  </tr>`).join('')||'<tr><td colspan="5" class="emp-cell">Belum ada log</td></tr>';
+  ltb.innerHTML=logEntries.map(function(l){
+    return '<tr>'+timeCell(l.dt)+
+      '<td style="font-weight:700">'+l.name+'</td>'+
+      '<td style="font-family:monospace;color:var(--text3)">#'+l.id+'</td>'+
+      '<td>'+mbadge(l.menu,l.menuName||mn[l.menu]||'?')+'</td>'+
+      '<td>'+sbadge(l.status)+'</td></tr>';
+  }).join('')||'<tr><td colspan="5" class="emp-cell">Belum ada log</td></tr>';
 
+  // Log masalah
+  var prob=logEntries.filter(function(l){return !l.onTime||l.menu===6||l.status==='TDK SESUAI';});
   var etb=document.getElementById('emerg-tb');
-  var prob=d.filter(l=>!l.onTime||l.menu===6||l.status==='TDK SESUAI');
-  etb.innerHTML=prob.map(l=>`<tr>
-    ${timeCell(l.dt)}
-    <td style="font-weight:700">${l.name}</td>
-    <td style="font-family:monospace;color:var(--text3)">#${l.id}</td>
-    <td><span class="badge br">${l.menuName}</span></td>
-    <td>${sbadge(l.status)}</td>
-    <td style="font-size:10px;color:var(--text3)">${l.menu===6?'Darurat':l.status==='TERLAMBAT'?'Terlambat':'Jadwal tdk sesuai'}</td>
-  </tr>`).join('')||'<tr><td colspan="6" class="emp-cell">Tidak ada log masalah</td></tr>';
+  etb.innerHTML=prob.map(function(l){
+    return '<tr>'+timeCell(l.dt)+
+      '<td style="font-weight:700">'+l.name+'</td>'+
+      '<td style="font-family:monospace;color:var(--text3)">#'+l.id+'</td>'+
+      '<td><span class="badge br">'+(l.menuName||mn[l.menu]||'?')+'</span></td>'+
+      '<td>'+sbadge(l.status)+'</td>'+
+      '<td style="font-size:9px;color:var(--text3)">'+(l.menu===6?'Darurat':l.status==='TERLAMBAT'?'Terlambat':'Jadwal tdk sesuai')+'</td></tr>';
+  }).join('')||'<tr><td colspan="6" class="emp-cell">Tidak ada masalah</td></tr>';
 }
 
-// ── All Activity ──────────────────────────────────────────────
-async function loadAllActivity(){
-  var d=await api('/api/allactivity');
-  var tb=document.getElementById('allact-tb');
-  if(!d){tb.innerHTML='<tr><td colspan="5" class="emp-cell">Tidak dapat terhubung</td></tr>';return;}
-  tb.innerHTML=d.map(a=>`<tr>
-    ${timeCell(a.dt)}
-    <td style="font-weight:700">${a.name}</td>
-    <td style="font-family:monospace;color:var(--text3)">#${a.id}</td>
-    <td>${mbadge(a.menu,a.menuName)}</td>
-    <td>${sbadge(a.result)}</td>
-  </tr>`).join('')||'<tr><td colspan="5" class="emp-cell">Belum ada aktivitas</td></tr>';
+// ── MQTT Commands ─────────────────────────────────────────────
+function cmdSetTime(){
+  var dt=document.getElementById('set-date').value;
+  var tm=document.getElementById('set-time').value;
+  if(!dt||!tm){toast('Pilih tanggal dan jam','tr');return;}
+  var p=dt.split('-'),t=tm.split(':');
+  var payload=JSON.stringify({cmd:'settime',y:+p[0],mo:+p[1],d:+p[2],h:+t[0],mi:+t[1],s:0});
+  mqttPublish('absensi/cmd',payload);
+  toast('Perintah set jam dikirim ✓','tg');
+}
+
+function cmdEnroll(){
+  if(!mqttConn){toast('MQTT tidak terhubung','tr');return;}
+  mqttPublish('absensi/cmd','{"cmd":"enroll"}');
+  var box=document.getElementById('ebox');
+  box.className='ebox wait';
+  box.innerHTML='<div class="eicon">◈</div>'+
+    '<div class="etitle">Menunggu ESP32...</div>'+
+    '<div class="esub">Ikuti instruksi di layar OLED.<br>Data karyawan baru akan muncul otomatis via MQTT.</div>'+
+    '<div style="margin-top:16px"><button class="btn bo" onclick="resetEnroll()">BATAL</button></div>';
+  enrollWait=true;
+  // Monitor topic employees untuk mendeteksi enroll selesai
+  toast('Perintah enroll dikirim ke ESP32','tg');
+}
+
+function resetEnroll(){
+  enrollWait=false;
+  var box=document.getElementById('ebox');
+  box.className='ebox';
+  box.innerHTML='<div class="eicon">◈</div>'+
+    '<div class="etitle">Siap Mendaftarkan Jari</div>'+
+    '<div class="esub">Klik tombol → perintah dikirim ke ESP32 via MQTT.<br>Ikuti instruksi di layar OLED Arduino.</div>'+
+    '<div style="margin-top:18px"><button class="btn bp" onclick="cmdEnroll()">MULAI ENROLL</button></div>';
+  document.getElementById('eresult').style.display='none';
+}
+
+function saveNewEmp(){
+  var id=document.getElementById('nid').value;
+  var nm=document.getElementById('nname').value.trim();
+  if(!nm){toast('Masukkan nama','tr');return;}
+  var payload=JSON.stringify({
+    cmd:'setemp',id:+id,name:nm,
+    inTime:document.getElementById('nin').value,
+    outTime:document.getElementById('nout').value,
+    breakIn:document.getElementById('nbrin').value,
+    breakOut:document.getElementById('nbrout').value,
+    izinTugas:0,izinTinggal:0
+  });
+  mqttPublish('absensi/cmd',payload);
+  toast('"'+nm+'" disimpan ✓','tg');
+  resetEnroll();
+}
+
+function cmdToggle(id){
+  var e=employees.find(function(x){return x.id===id;});
+  if(!confirm((e&&e.enabled?'Nonaktifkan':'Aktifkan')+' karyawan #'+id+'?'))return;
+  mqttPublish('absensi/cmd',JSON.stringify({cmd:'toggle',id:id}));
+  toast('Perintah toggle dikirim ✓','tg');
+}
+
+function cmdDelete(id,name){
+  if(!confirm('Hapus "'+name+'" (#'+id+') dari sensor dan database?'))return;
+  mqttPublish('absensi/cmd',JSON.stringify({cmd:'delete',id:id}));
+  toast('Perintah hapus dikirim ✓','tg');
+  // Hapus dari local state sementara
+  employees=employees.filter(function(e){return e.id!==id;});
+  renderEmployees(); updateStats();
+}
+
+function cmdReset(){
+  if(!confirm('⚠ HAPUS SEMUA JARI & DATA KARYAWAN?\n\nTidak bisa dibatalkan.'))return;
+  var kode=prompt('Ketik RESET untuk konfirmasi:');
+  if(kode!=='RESET'){toast('Dibatalkan');return;}
+  mqttPublish('absensi/cmd','{"cmd":"reset"}');
+  employees=[]; renderEmployees(); updateStats();
+  toast('Perintah reset dikirim ✓','tg');
+}
+
+function cmdGetLogs(){
+  mqttPublish('absensi/cmd','{"cmd":"getlogs"}');
+  toast('Meminta data log...','');
 }
 
 // ── Edit Employee ─────────────────────────────────────────────
 function openEdit(id){
-  var e=employees.find(x=>x.id===id); if(!e)return;
+  var e=employees.find(function(x){return x.id===id;});if(!e)return;
   document.getElementById('eid').value=e.id;
   document.getElementById('eid-d').value='#'+e.id;
   document.getElementById('ename').value=e.name;
@@ -764,125 +765,32 @@ function openEdit(id){
 }
 function closeMod(id){document.getElementById(id).classList.remove('open');}
 
-async function saveEdit(){
+function saveEdit(){
   var id=document.getElementById('eid').value;
   var nm=document.getElementById('ename').value.trim();
   if(!nm){toast('Nama kosong','tr');return;}
-  var b=`id=${id}&name=${encodeURIComponent(nm)}`
-    +`&inTime=${document.getElementById('ein').value}`
-    +`&outTime=${document.getElementById('eout').value}`
-    +`&breakIn=${document.getElementById('ebrin').value}`
-    +`&breakOut=${document.getElementById('ebrout').value}`
-    +`&izinTugas=${document.getElementById('eit-aktif').checked?1:0}`
-    +`&izinTugasJam=${document.getElementById('eit-jam').value}`
-    +`&izinTinggal=${document.getElementById('etn-aktif').checked?1:0}`
-    +`&izinTinggalJam=${document.getElementById('etn-jam').value}`;
-  var r=await api('/api/employee',{method:'POST',body:b});
-  if(r&&r.status==='ok'){toast('Tersimpan ✓','tg');closeMod('medit');loadEmp();}
-  else toast('Gagal simpan','tr');
-}
-
-async function toggleEmp(id){
-  var e=employees.find(x=>x.id===id);
-  if(!confirm((e&&e.enabled?'Nonaktifkan':'Aktifkan')+' karyawan ID #'+id+'?'))return;
-  var r=await api('/api/toggle',{method:'POST',body:'id='+id});
-  if(r&&r.status==='ok'){toast('Berhasil ✓','tg');loadEmp();}else toast('Gagal','tr');
-}
-
-async function delEmp(id,name){
-  if(!confirm('Hapus "'+name+'" (#'+id+') dari sensor dan database?'))return;
-  var r=await api('/api/delete',{method:'POST',body:'id='+id});
-  if(r&&r.status==='ok'){toast('Dihapus ✓','tg');loadEmp();}else toast('Gagal','tr');
-}
-
-// ── Enroll ────────────────────────────────────────────────────
-async function startEnroll(){
-  var box=document.getElementById('ebox');
-  box.className='ebox wait';
-  box.innerHTML=`<div class="eicon">◈</div>
-    <div class="etitle">Menunggu Proses di Arduino...</div>
-    <div class="esub">Ikuti instruksi di layar OLED.<br>Tempel jari pertama saat diminta.</div>
-    <div style="margin-top:20px"><button class="btn bo" onclick="resetEnroll()">BATAL</button></div>`;
-  var r=await api('/api/enroll',{method:'POST'});
-  if(!r){toast('Tidak terhubung','tr');resetEnroll();return;}
-  var tries=0;
-  enrollTmr=setInterval(async()=>{
-    if(++tries>70){clearInterval(enrollTmr);resetEnroll();toast('Timeout','tr');return;}
-    var res=await api('/api/enrollresult');
-    if(res&&res.done){
-      clearInterval(enrollTmr);
-      if(res.id>0){
-        box.className='ebox ok';
-        box.innerHTML=`<div class="eicon" style="color:var(--green)">✓</div>
-          <div class="etitle">Enroll Berhasil!</div>
-          <div class="esub">ID Fingerprint: <strong>#${res.id}</strong></div>`;
-        document.getElementById('nid').value=res.id;
-        document.getElementById('nname').value='';
-        document.getElementById('eresult').style.display='block';
-        toast('Enroll berhasil! Lengkapi data karyawan.','tg');
-      }else{resetEnroll();toast('Enroll gagal','tr');}
-    }
-  },1000);
-}
-function resetEnroll(){
-  if(enrollTmr)clearInterval(enrollTmr);
-  document.getElementById('ebox').className='ebox';
-  document.getElementById('ebox').innerHTML=`<div class="eicon">◈</div>
-    <div class="etitle">Siap Mendaftarkan Jari</div>
-    <div class="esub">Klik tombol di bawah lalu ikuti instruksi di layar OLED Arduino.</div>
-    <div style="margin-top:20px"><button class="btn bp" onclick="startEnroll()">MULAI ENROLL</button></div>`;
-  document.getElementById('eresult').style.display='none';
-}
-async function saveNewEmp(){
-  var id=document.getElementById('nid').value;
-  var nm=document.getElementById('nname').value.trim();
-  if(!nm){toast('Masukkan nama karyawan','tr');return;}
-  var b=`id=${id}&name=${encodeURIComponent(nm)}`
-    +`&inTime=${document.getElementById('nin').value}`
-    +`&outTime=${document.getElementById('nout').value}`
-    +`&breakIn=${document.getElementById('nbrin').value}`
-    +`&breakOut=${document.getElementById('nbrout').value}`
-    +`&izinTugas=0&izinTinggal=0`;
-  var r=await api('/api/employee',{method:'POST',body:b});
-  if(r&&r.status==='ok'){toast('"'+nm+'" berhasil didaftarkan ✓','tg');resetEnroll();loadEmp();}
-  else toast('Gagal simpan','tr');
-}
-
-// ── Set Time ──────────────────────────────────────────────────
-async function refreshCurTime(){
-  var d=await api('/api/status');
-  if(d){
-    document.getElementById('cur-time').textContent=d.time;
-    document.getElementById('cur-date').textContent=d.date;
-  }
-}
-async function setTime(){
-  var dt=document.getElementById('set-date').value;
-  var tm=document.getElementById('set-time').value;
-  if(!dt||!tm){toast('Pilih tanggal dan jam','tr');return;}
-  var parts=dt.split('-'),tparts=tm.split(':');
-  var b=`y=${parts[0]}&mo=${parseInt(parts[1])}&d=${parseInt(parts[2])}&h=${parseInt(tparts[0])}&mi=${parseInt(tparts[1])}&s=0`;
-  var r=await api('/api/settime',{method:'POST',body:b});
-  if(r&&r.status==='ok'){toast('Jam berhasil diset ✓','tg');refreshCurTime();}
-  else toast('Gagal set jam','tr');
-}
-
-// ── Reset Fingers ─────────────────────────────────────────────
-async function confirmResetFingers(){
-  if(!confirm('⚠ HAPUS SEMUA JARI & DATA KARYAWAN?\n\nSeluruh data tidak dapat dikembalikan.\nLanjutkan?'))return;
-  var kode=prompt('Ketik RESET untuk konfirmasi:');
-  if(kode!=='RESET'){toast('Dibatalkan');return;}
-  toast('Mereset sensor...');
-  var r=await api('/api/resetfingers',{method:'POST'});
-  if(r&&r.status==='ok'){toast('Semua jari & data dihapus ✓','tg');loadEmp();}
-  else toast((r&&r.msg)||'Gagal reset','tr');
+  var payload=JSON.stringify({
+    cmd:'setemp', id:+id, name:nm,
+    inTime:  document.getElementById('ein').value,
+    outTime: document.getElementById('eout').value,
+    breakIn: document.getElementById('ebrin').value,
+    breakOut:document.getElementById('ebrout').value,
+    izinTugas:      document.getElementById('eit-aktif').checked?1:0,
+    izinTugasJam:   document.getElementById('eit-jam').value,
+    izinTinggal:    document.getElementById('etn-aktif').checked?1:0,
+    izinTinggalJam: document.getElementById('etn-jam').value,
+  });
+  mqttPublish('absensi/cmd',payload);
+  toast('Tersimpan ✓ — menunggu konfirmasi ESP32','tg');
+  closeMod('medit');
 }
 
 // ── Init ──────────────────────────────────────────────────────
-loadEmp(); loadLogs();
 document.getElementById('set-date').value=new Date().toISOString().slice(0,10);
 document.getElementById('set-time').value=new Date().toTimeString().slice(0,5);
-document.getElementById('set-ip').value=ESP_IP;
+setPill('pill-wifi','warn','Connecting...');
+setPill('pill-mqtt','warn','Connecting...');
+mqttConnect();
 </script>
 </body>
 </html>
