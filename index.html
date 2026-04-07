@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Absensi Fingerprint — IoT v3</title>
+<title>Absensi Fingerprint — IoT v4</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/5.0.5/mqtt.min.js"></script>
 <style>
-/* ── THEME VARS [FIX3] ── */
+/* ── THEME VARS ── */
 :root{
   --bg:#0b0b09;--bg2:#111110;--bg3:#191917;--bg4:#1f1f1c;
   --border:#252522;--border2:#2e2e2a;
@@ -16,6 +16,7 @@
   --yellow:#f9a825;--yellow-d:rgba(249,168,37,.12);
   --blue:#42a5f5;--blue-d:rgba(66,165,245,.12);
   --orange:#ff7043;--orange-d:rgba(255,112,67,.12);
+  --purple:#ab47bc;--purple-d:rgba(171,71,188,.12);--purple-b:rgba(171,71,188,.3);
   --accent:#4caf50;
   --shadow:none;
 }
@@ -28,6 +29,7 @@
   --yellow:#f57f17;--yellow-d:rgba(245,127,23,.1);
   --blue:#1565c0;--blue-d:rgba(21,101,192,.08);
   --orange:#bf360c;--orange-d:rgba(191,54,12,.08);
+  --purple:#6a1b9a;--purple-d:rgba(106,27,154,.08);--purple-b:rgba(106,27,154,.25);
   --accent:#2e7d32;
   --shadow:0 1px 3px rgba(0,0,0,.08);
 }
@@ -94,6 +96,8 @@ tr:hover td{background:var(--bg3)}
 .bb{background:var(--blue-d);color:var(--blue);border:1px solid rgba(66,165,245,.3)}
 .bgr{background:var(--bg3);color:var(--text3);border:1px solid var(--border)}
 .bor{background:var(--orange-d);color:var(--orange);border:1px solid rgba(255,112,67,.3)}
+/* [V4-3] Admin badge */
+.bpu{background:var(--purple-d);color:var(--purple);border:1px solid var(--purple-b)}
 
 /* ── BUTTONS ── */
 .btn{display:inline-flex;align-items:center;gap:4px;padding:6px 12px;border:none;border-radius:2px;font-size:9px;font-weight:700;letter-spacing:.1em;cursor:pointer;font-family:inherit;transition:all .1s}
@@ -101,6 +105,8 @@ tr:hover td{background:var(--bg3)}
 .bg2{background:var(--green-d);color:var(--green);border:1px solid var(--green-b)}.bg2:hover{background:var(--green-b)}
 .br2{background:var(--red-d);color:var(--red);border:1px solid var(--red-b)}.br2:hover{background:var(--red-b)}
 .bo{background:transparent;border:1px solid var(--border2);color:var(--text2)}.bo:hover{background:var(--bg3)}
+/* [V4-3] Admin toggle button */
+.bpu2{background:var(--purple-d);color:var(--purple);border:1px solid var(--purple-b)}.bpu2:hover{background:var(--purple-b)}
 .bsm{padding:3px 8px;font-size:8px}
 .btn:disabled{opacity:.3;cursor:not-allowed}
 
@@ -126,7 +132,7 @@ tr:hover td{background:var(--bg3)}
 /* ── MODAL ── */
 .moverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
 .moverlay.open{display:flex}
-.modal{background:var(--bg2);border:1px solid var(--border2);width:520px;max-width:95vw;border-radius:2px;max-height:90vh;overflow-y:auto}
+.modal{background:var(--bg2);border:1px solid var(--border2);width:540px;max-width:95vw;border-radius:2px;max-height:90vh;overflow-y:auto}
 .mh{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--bg2)}
 .mt{font-size:9px;font-weight:700;letter-spacing:.15em;color:var(--text2)}
 .mx{background:none;border:none;font-size:15px;cursor:pointer;color:var(--text3)}.mx:hover{color:var(--text)}
@@ -134,6 +140,11 @@ tr:hover td{background:var(--bg3)}
 .mf{padding:10px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;position:sticky;bottom:0;background:var(--bg2)}
 .msep{border:none;border-top:1px dashed var(--border);margin:10px 0}
 .mlbl{font-size:7px;font-weight:700;letter-spacing:.18em;color:var(--text3);margin-bottom:7px}
+
+/* [V4-3] Admin section in modal */
+.admin-box{background:var(--purple-d);border:1px solid var(--purple-b);border-radius:2px;padding:12px;margin-bottom:10px}
+.admin-box-title{font-size:8px;font-weight:700;letter-spacing:.15em;color:var(--purple);margin-bottom:8px}
+.admin-note{font-size:9px;color:var(--text3);line-height:1.7;margin-top:6px}
 
 /* ── TOAST ── */
 #toast{position:fixed;bottom:18px;right:18px;z-index:999;background:var(--bg3);color:var(--text);padding:9px 14px;border-radius:2px;font-size:10px;font-family:monospace;font-weight:700;border:1px solid var(--border2);letter-spacing:.05em;transform:translateY(50px);opacity:0;transition:all .22s;pointer-events:none}
@@ -148,13 +159,14 @@ tr:hover td{background:var(--bg3)}
 @keyframes bld{0%,100%{opacity:1}50%{opacity:.2}}
 .ban{background:var(--yellow-d);border:1px solid rgba(249,168,37,.2);border-radius:2px;padding:10px 14px;margin-bottom:16px;font-size:10px;color:var(--yellow);line-height:1.7;display:none}
 .ban.show{display:block}
-/* ── THEME TOGGLE [FIX3] ── */
 .theme-btn{background:transparent;border:1px solid var(--border2);color:var(--text2);padding:4px 9px;border-radius:2px;cursor:pointer;font-size:10px;font-family:inherit;font-weight:700}
 .theme-btn:hover{background:var(--bg3)}
-/* ── STATUS KARYAWAN badges ── */
 .status-row{display:flex;gap:4px;flex-wrap:wrap}
-/* ── Toleransi form ── */
 .tol-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* [V4-4] Detail keterangan log */
+.log-detail{font-size:9px;color:var(--text3);margin-top:2px;font-style:italic}
+
 @media(max-width:680px){.layout{grid-template-columns:1fr}.sidebar{display:none}.sgrid{grid-template-columns:1fr 1fr}.c4{grid-template-columns:1fr 1fr}}
 </style>
 </head>
@@ -163,7 +175,7 @@ tr:hover td{background:var(--bg3)}
 <div class="topbar">
   <div class="brand">
     <span class="pulse off" id="pulse"></span>
-    ATTAMATION · FINGERPRINT ATTENDANCE
+    ATTAMATION · FINGERPRINT ATTENDANCE v4
   </div>
   <div class="topright">
     <div class="pill" id="pill-wifi"><span class="d"></span><span>WiFi</span></div>
@@ -206,8 +218,8 @@ tr:hover td{background:var(--bg3)}
   <div class="card">
     <div class="ch"><span class="ct">LOG TERBARU</span><span style="font-size:8px;color:var(--text3)"><span class="live-dot"></span>REALTIME</span></div>
     <div style="padding:0">
-      <table><thead><tr><th>WAKTU</th><th>NAMA</th><th>AKTIVITAS</th><th>STATUS</th></tr></thead>
-      <tbody id="dash-log"><tr><td colspan="4" class="ec">Menunggu data ESP32...</td></tr></tbody></table>
+      <table><thead><tr><th>WAKTU</th><th>NAMA</th><th>AKTIVITAS</th><th>STATUS</th><th>KETERANGAN</th></tr></thead>
+      <tbody id="dash-log"><tr><td colspan="5" class="ec">Menunggu data ESP32...</td></tr></tbody></table>
     </div>
   </div>
   <div class="card">
@@ -223,15 +235,19 @@ tr:hover td{background:var(--bg3)}
 <!-- KARYAWAN -->
 <div class="pg" id="pg-emp">
   <div class="ptitle">Daftar Karyawan</div>
-  <div class="psub">KELOLA DATA, JADWAL, IZIN, STATUS HARIAN</div>
+  <div class="psub">KELOLA DATA, JADWAL, IZIN, STATUS HARIAN, ADMIN</div>
+  <!-- [V4-3] Info admin -->
+  <div class="ban show" style="border-color:var(--purple-b);background:var(--purple-d);color:var(--purple)">
+    ◆ FITUR ADMIN: Karyawan bertanda <strong>[ADMIN]</strong> dapat mengakses Mode AP saat WiFi putus dan tidak terikat jam kerja — semua absensi selalu berhasil kapanpun.
+  </div>
   <div class="card">
     <div class="ch"><span class="ct">DATA KARYAWAN</span><button class="btn bo bsm" onclick="mqttPublish('absensi/cmd','{"cmd":"getemployees"}')">⟳ REFRESH</button></div>
     <div style="padding:0;overflow-x:auto">
       <table><thead><tr>
-        <th>ID</th><th>NAMA</th><th>MASUK</th><th>PULANG</th>
+        <th>ID</th><th>NAMA</th><th>ROLE</th><th>MASUK</th><th>PULANG</th>
         <th>ISTIRAHAT</th><th>STATUS HARI INI</th><th>STATUS</th><th>AKSI</th>
       </tr></thead>
-      <tbody id="emp-tb"><tr><td colspan="8" class="ec">Menunggu data...</td></tr></tbody></table>
+      <tbody id="emp-tb"><tr><td colspan="9" class="ec">Menunggu data...</td></tr></tbody></table>
     </div>
   </div>
 </div>
@@ -255,11 +271,22 @@ tr:hover td{background:var(--bg3)}
           <div class="fg"><label>ID FINGERPRINT</label><input id="nid" readonly></div>
           <div class="fg"><label>NAMA</label><input id="nname" placeholder="Masukkan nama..."></div>
         </div>
-        <div class="frow c4">
-          <div class="fg"><label>JAM MASUK</label><input type="time" id="nin" value="08:00"></div>
-          <div class="fg"><label>JAM PULANG</label><input type="time" id="nout" value="16:00"></div>
-          <div class="fg"><label>MULAI ISTIRAHAT</label><input type="time" id="nbrin" value="12:00"></div>
-          <div class="fg"><label>SELESAI ISTIRAHAT</label><input type="time" id="nbrout" value="13:00"></div>
+        <!-- [V4-3] Admin checkbox in enroll -->
+        <div class="admin-box">
+          <div class="admin-box-title">◆ HAK AKSES ADMIN</div>
+          <div class="izin-row">
+            <input type="checkbox" id="nadmin">
+            <label for="nadmin" style="font-size:10px;color:var(--purple)"><strong>Jadikan Admin</strong></label>
+          </div>
+          <div class="admin-note">Admin dapat membuka Mode AP (7) saat WiFi terputus dan bebas absensi kapanpun tanpa batasan jam kerja.</div>
+        </div>
+        <div id="nadmin-sched">
+          <div class="frow c4">
+            <div class="fg"><label>JAM MASUK</label><input type="time" id="nin" value="08:00"></div>
+            <div class="fg"><label>JAM PULANG</label><input type="time" id="nout" value="16:00"></div>
+            <div class="fg"><label>MULAI ISTIRAHAT</label><input type="time" id="nbrin" value="12:00"></div>
+            <div class="fg"><label>SELESAI ISTIRAHAT</label><input type="time" id="nbrout" value="13:00"></div>
+          </div>
         </div>
         <div class="flex gap8 mt12">
           <button class="btn bg2" onclick="saveNewEmp()">SIMPAN</button>
@@ -277,26 +304,26 @@ tr:hover td{background:var(--bg3)}
   <div class="card">
     <div class="ch"><span class="ct">RIWAYAT</span><button class="btn bo bsm" onclick="cmdGetLogs()">⟳ REFRESH</button></div>
     <div style="padding:0;overflow-x:auto">
-      <table><thead><tr><th>WAKTU</th><th>NAMA</th><th>ID</th><th>AKTIVITAS</th><th>STATUS</th></tr></thead>
-      <tbody id="log-tb"><tr><td colspan="5" class="ec">Belum ada data</td></tr></tbody></table>
+      <table><thead><tr><th>WAKTU</th><th>NAMA</th><th>ID</th><th>AKTIVITAS</th><th>STATUS</th><th>KETERANGAN</th></tr></thead>
+      <tbody id="log-tb"><tr><td colspan="6" class="ec">Belum ada data</td></tr></tbody></table>
     </div>
   </div>
 </div>
 
-<!-- LOG MASALAH -->
+<!-- LOG MASALAH [V4-4] -->
 <div class="pg" id="pg-emerg">
   <div class="ptitle">Log Tidak Sesuai</div>
-  <div class="psub">TERLAMBAT, DARURAT, WAJIB DARURAT, TDK SESUAI</div>
+  <div class="psub">TERLAMBAT · BELUM WAKTUNYA · ACCESS DENIED · TERLALU CEPAT</div>
   <div class="card">
     <div class="ch"><span class="ct">LOG MASALAH</span></div>
     <div style="padding:0;overflow-x:auto">
-      <table><thead><tr><th>WAKTU</th><th>NAMA</th><th>ID</th><th>AKTIVITAS</th><th>STATUS</th><th>KET</th></tr></thead>
+      <table><thead><tr><th>WAKTU</th><th>NAMA</th><th>ID</th><th>AKTIVITAS</th><th>STATUS</th><th>KETERANGAN DETAIL</th></tr></thead>
       <tbody id="emerg-tb"><tr><td colspan="6" class="ec">Tidak ada masalah</td></tr></tbody></table>
     </div>
   </div>
 </div>
 
-<!-- SEMUA SCAN JARI [FIX7] -->
+<!-- SEMUA SCAN JARI -->
 <div class="pg" id="pg-raw">
   <div class="ptitle">Semua Scan Jari</div>
   <div class="psub">RECORD SEMUA AKTIVITAS SENSOR — TERMASUK TIDAK DIKENALI</div>
@@ -314,7 +341,6 @@ tr:hover td{background:var(--bg3)}
   <div class="ptitle">Pengaturan</div>
   <div class="psub">KONFIGURASI SISTEM</div>
 
-  <!-- [FIX3] Theme toggle -->
   <div class="card">
     <div class="ch"><span class="ct">TAMPILAN</span></div>
     <div class="cb" style="display:flex;align-items:center;gap:14px">
@@ -342,7 +368,7 @@ tr:hover td{background:var(--bg3)}
     </div>
   </div>
 
-  <!-- [FIX8] Toleransi Waktu -->
+  <!-- Toleransi Waktu -->
   <div class="card">
     <div class="ch"><span class="ct">TOLERANSI WAKTU ABSENSI</span></div>
     <div class="cb">
@@ -372,7 +398,21 @@ tr:hover td{background:var(--bg3)}
     </div>
   </div>
 
-  <!-- [FIX8] Reset Status Karyawan -->
+  <!-- [V4-1] Info Mode AP -->
+  <div class="card" style="border-color:var(--purple-b)">
+    <div class="ch" style="background:var(--purple-d)"><span class="ct" style="color:var(--purple)">◆ INFO MODE AP (WiFi SETUP)</span></div>
+    <div class="cb" style="font-size:10px;color:var(--text3);line-height:1.8">
+      Mode AP <strong>tidak otomatis aktif</strong> saat WiFi terputus.<br>
+      Untuk mengkonfigurasi WiFi baru:<br>
+      1. Pastikan ada karyawan dengan status Admin.<br>
+      2. Saat WiFi putus, tekan <strong>[*] → [#]</strong> di keypad untuk halaman 2.<br>
+      3. Pilih <strong>7. Mode AP</strong> → tempel jari Admin → portal WiFi aktif.<br>
+      4. Hubungkan HP ke WiFi <strong>ABSENSI-SETUP</strong> → buka 192.168.4.1.<br>
+      AP auto-off setelah <strong>5 menit</strong> tidak digunakan atau tekan [*].
+    </div>
+  </div>
+
+  <!-- Reset Status Karyawan -->
   <div class="card">
     <div class="ch"><span class="ct">RESET STATUS KARYAWAN</span></div>
     <div class="cb">
@@ -414,14 +454,28 @@ tr:hover td{background:var(--bg3)}
         <div class="fg"><label>ID</label><input id="eid-d" readonly></div>
         <div class="fg"><label>NAMA</label><input id="ename"></div>
       </div>
-      <div class="frow c2">
-        <div class="fg"><label>JAM MASUK</label><input type="time" id="ein"></div>
-        <div class="fg"><label>JAM PULANG</label><input type="time" id="eout"></div>
+
+      <!-- [V4-3] Admin section -->
+      <div class="admin-box" style="margin-bottom:12px">
+        <div class="admin-box-title">◆ HAK AKSES ADMIN</div>
+        <div class="izin-row">
+          <input type="checkbox" id="eadmin" onchange="toggleAdminFields()">
+          <label for="eadmin" style="font-size:10px;color:var(--purple)"><strong>Jadikan Admin</strong></label>
+        </div>
+        <div class="admin-note">Admin bebas scan kapanpun — tidak terikat jadwal. Dapat membuka Mode AP saat WiFi terputus.</div>
       </div>
-      <div class="frow c2">
-        <div class="fg"><label>MULAI ISTIRAHAT</label><input type="time" id="ebrin"></div>
-        <div class="fg"><label>SELESAI ISTIRAHAT</label><input type="time" id="ebrout"></div>
+
+      <div id="eadmin-sched">
+        <div class="frow c2">
+          <div class="fg"><label>JAM MASUK</label><input type="time" id="ein"></div>
+          <div class="fg"><label>JAM PULANG</label><input type="time" id="eout"></div>
+        </div>
+        <div class="frow c2">
+          <div class="fg"><label>MULAI ISTIRAHAT</label><input type="time" id="ebrin"></div>
+          <div class="fg"><label>SELESAI ISTIRAHAT</label><input type="time" id="ebrout"></div>
+        </div>
       </div>
+
       <hr class="msep">
       <div class="mlbl">IZIN TUGAS KELUAR (MENU 4)</div>
       <div class="izin-row">
@@ -455,7 +509,7 @@ var MQTT_USER='Finger_System', MQTT_PASS='Atamation21';
 var employees=[], logEntries=[], rawEntries=[], mqttOk=false, client=null;
 var curPage='dash', lastBeatMs=0;
 
-// ── [FIX6] Persistent log via localStorage ───────────────────
+// ── Persistent log via localStorage ──────────────────────────
 function saveLocalLogs(){
   try{localStorage.setItem('fp_logs',JSON.stringify(logEntries.slice(0,500)));}catch(e){}
 }
@@ -464,7 +518,7 @@ function loadLocalLogs(){
 }
 loadLocalLogs();
 
-// ── [FIX3] Theme ─────────────────────────────────────────────
+// ── Theme ─────────────────────────────────────────────────────
 function applyTheme(t){
   document.documentElement.setAttribute('data-theme',t);
   localStorage.setItem('fp_theme',t);
@@ -533,7 +587,6 @@ function handleMsg(topic,data,raw){
     document.getElementById('cur-date').textContent=data.date||'--/--/----';
     document.getElementById('esp-beat').textContent=new Date().toTimeString().slice(0,8);
     lastBeatMs=Date.now();
-    // Sync toleransi dari heartbeat
     if(data.cfgMasukSebelum!==undefined){
       document.getElementById('cfg-ms').value=data.cfgMasukSebelum;
       document.getElementById('cfg-msd').value=data.cfgMasukSesudah;
@@ -547,14 +600,17 @@ function handleMsg(topic,data,raw){
     return;
   }
   if(topic==='absensi/log'){
-    // [FIX6] Cek duplikat sebelum tambah
     var dup=logEntries.find(function(x){return x.dt===data.dt&&x.id===data.id&&x.menu===data.menu;});
     if(!dup){
       logEntries.unshift(data);
       if(logEntries.length>500)logEntries.pop();
-      saveLocalLogs(); // [FIX6]
+      saveLocalLogs();
       renderLogs();updateStats();
-      toast('Absensi: '+data.name+' — '+data.status,'tg');
+      // [V4-4] Toast dengan detail jika ada masalah
+      var toastMsg='Absensi: '+data.name+' — '+(data.status||'?');
+      if(data.detail&&data.status!=='TEPAT'&&data.status!=='ADMIN')
+        toastMsg+=' | '+data.detail;
+      toast(toastMsg,data.onTime===false?'tr':'tg');
     }
     return;
   }
@@ -566,19 +622,17 @@ function handleMsg(topic,data,raw){
       });
       logEntries.sort(function(a,b){return b.dt.localeCompare(a.dt);});
       if(logEntries.length>500)logEntries.length=500;
-      saveLocalLogs(); // [FIX6]
+      saveLocalLogs();
       renderLogs();updateStats();
     }
     return;
   }
-  // [FIX7] Raw scan
   if(topic==='absensi/rawscan'){
     rawEntries.unshift(data);
     if(rawEntries.length>300)rawEntries.pop();
     if(curPage==='raw')renderRaw();
     return;
   }
-  // [FIX1] Enroll result
   if(topic==='absensi/enrollresult'){
     var box=document.getElementById('ebox');
     box.className='ebox ok';
@@ -596,44 +650,63 @@ function handleMsg(topic,data,raw){
 // ── Render ────────────────────────────────────────────────────
 var menuColor={1:'bb',2:'bg',3:'by',4:'bgr',5:'bgr',6:'br'};
 function mbadge(m,n){return '<span class="badge '+(menuColor[m]||'bgr')+'">'+n+'</span>';}
+
+// [V4-4] Status badge dengan warna detail
 function sbadge(s){
-  if(!s||s==='TEPAT')      return '<span class="badge bg">TEPAT</span>';
-  if(s==='TERLAMBAT')      return '<span class="badge by">TERLAMBAT</span>';
-  if(s==='DARURAT')        return '<span class="badge br">DARURAT</span>';
-  if(s==='WAJIB DARURAT')  return '<span class="badge br">WAJIB DARURAT</span>';
-  if(s==='DIBLOKIR')       return '<span class="badge br">DIBLOKIR</span>';
-  if(s==='NONAKTIF')       return '<span class="badge br">NONAKTIF</span>';
-  if(s==='TERLALU AWAL')   return '<span class="badge bor">TERLALU AWAL</span>';
-  if(s==='TDK SESUAI')     return '<span class="badge bor">TDK SESUAI</span>';
+  if(!s||s==='TEPAT')       return '<span class="badge bg">TEPAT</span>';
+  if(s==='ADMIN')           return '<span class="badge bpu">ADMIN</span>';
+  if(s==='TERLAMBAT')       return '<span class="badge by">TERLAMBAT</span>';
+  if(s==='DARURAT')         return '<span class="badge br">DARURAT</span>';
+  if(s==='WAJIB DARURAT')   return '<span class="badge br">WAJIB DARURAT</span>';
+  if(s==='TERLALU AWAL')    return '<span class="badge bor">TERLALU AWAL</span>';
+  if(s==='PULANG CEPAT')    return '<span class="badge bor">PULANG CEPAT</span>';
+  if(s==='ACCESS DENIED')   return '<span class="badge br">ACCESS DENIED</span>';
+  if(s==='DIBLOKIR')        return '<span class="badge br">DIBLOKIR</span>';
+  if(s==='NONAKTIF')        return '<span class="badge br">NONAKTIF</span>';
   return '<span class="badge bgr">'+s+'</span>';
 }
+
 function timeCell(dt){
   if(!dt)return '<td>—</td>';
   return '<td style="font-family:monospace;font-size:10px;white-space:nowrap">'+
     dt.slice(11,19)+' <span style="color:var(--text3)">'+dt.slice(0,10)+'</span></td>';
 }
 
+// [V4-4] Cell untuk keterangan detail
+function detailCell(detail){
+  if(!detail||detail==='Absensi berhasil tepat waktu'||detail==='Admin access')
+    return '<td style="color:var(--text3);font-size:9px">—</td>';
+  return '<td style="font-size:9px;color:var(--orange);max-width:200px">'+detail+'</td>';
+}
+
 function renderEmployees(){
   var tb=document.getElementById('emp-tb');
-  if(!employees.length){tb.innerHTML='<tr><td colspan="8" class="ec">Belum ada karyawan</td></tr>';return;}
+  if(!employees.length){tb.innerHTML='<tr><td colspan="9" class="ec">Belum ada karyawan</td></tr>';return;}
   tb.innerHTML=employees.map(function(e){
-    // Status harian
     var statusRow='<div class="status-row">';
     statusRow+=(e.sudahMasuk?'<span class="badge bg">Masuk✓</span>':'<span class="badge bgr">Masuk—</span>');
     statusRow+=(e.sudahPulang?'<span class="badge bg">Pulang✓</span>':'<span class="badge bgr">Pulang—</span>');
     if(e.istirahatCount!==undefined)statusRow+='<span class="badge '+(e.istirahatCount>=2?'bg':'bgr')+'">Ist:'+e.istirahatCount+'/2</span>';
     if(e.butuhDarurat)statusRow+='<span class="badge br">⚠Darurat</span>';
     statusRow+='</div>';
+    // [V4-3] Role badge
+    var roleBadge=e.isAdmin?'<span class="badge bpu">◆ ADMIN</span>':'<span class="badge bgr">STAFF</span>';
+    // Jadwal — admin tampilkan "Bebas"
+    var jadwalMasuk=e.isAdmin?'<span style="color:var(--purple)">Bebas</span>':e.inTime;
+    var jadwalPulang=e.isAdmin?'<span style="color:var(--purple)">Bebas</span>':e.outTime;
+    var jadwalIst=e.isAdmin?'<span style="color:var(--purple)">—</span>':(e.breakIn+'–'+e.breakOut);
     return '<tr>'+
       '<td style="font-family:monospace;font-weight:700;color:var(--blue)">#'+e.id+'</td>'+
       '<td style="font-weight:700">'+e.name+'</td>'+
-      '<td style="font-family:monospace">'+e.inTime+'</td>'+
-      '<td style="font-family:monospace">'+e.outTime+'</td>'+
-      '<td style="font-family:monospace;font-size:10px;color:var(--text3)">'+e.breakIn+'–'+e.breakOut+'</td>'+
+      '<td>'+roleBadge+'</td>'+
+      '<td style="font-family:monospace">'+jadwalMasuk+'</td>'+
+      '<td style="font-family:monospace">'+jadwalPulang+'</td>'+
+      '<td style="font-family:monospace;font-size:10px;color:var(--text3)">'+jadwalIst+'</td>'+
       '<td>'+statusRow+'</td>'+
       '<td><span class="badge '+(e.enabled?'bg':'br')+'">'+(e.enabled?'AKTIF':'NONAKTIF')+'</span></td>'+
-      '<td><div class="flex gap8">'+
+      '<td><div class="flex gap8" style="flex-wrap:wrap">'+
         '<button class="btn bo bsm" onclick="openEdit('+e.id+')">EDIT</button>'+
+        '<button class="btn bsm '+(e.isAdmin?'bpu2':'bo')+'" onclick="cmdToggleAdmin('+e.id+')" title="'+(e.isAdmin?'Cabut admin':'Jadikan admin')+'">'+(e.isAdmin?'◆ ADMIN':'ADMIN?')+'</button>'+
         '<button class="btn bsm '+(e.enabled?'br2':'bg2')+'" onclick="cmdToggle('+e.id+')">'+(e.enabled?'DISABLE':'ENABLE')+'</button>'+
         '<button class="btn bo bsm" style="color:var(--red)" onclick="cmdDelete('+e.id+',\''+e.name.replace(/'/g,"\\'")+'\')" >HAPUS</button>'+
       '</div></td>'+
@@ -650,14 +723,16 @@ function updateStats(){
   document.getElementById('s-today').textContent=logEntries.filter(function(l){return l.dt&&l.dt.startsWith(today);}).length||'0';
 }
 
+// [V4-4] Render logs dengan kolom detail
 function renderLogs(){
   var mn={1:'Masuk Kerja',2:'Pulang Kerja',3:'Istirahat',4:'Izin Tugas',5:'Izin Tinggal',6:'Darurat'};
   var dash=document.getElementById('dash-log');
   dash.innerHTML=logEntries.slice(0,10).map(function(l){
     return '<tr>'+timeCell(l.dt)+'<td style="font-weight:700">'+l.name+'</td>'+
       '<td>'+mbadge(l.menu,l.menuName||mn[l.menu]||'?')+'</td>'+
-      '<td>'+sbadge(l.status)+'</td></tr>';
-  }).join('')||'<tr><td colspan="4" class="ec">Belum ada aktivitas</td></tr>';
+      '<td>'+sbadge(l.status)+'</td>'+
+      detailCell(l.detail)+'</tr>';
+  }).join('')||'<tr><td colspan="5" class="ec">Belum ada aktivitas</td></tr>';
 
   var ltb=document.getElementById('log-tb');
   ltb.innerHTML=logEntries.map(function(l){
@@ -665,22 +740,41 @@ function renderLogs(){
       '<td style="font-weight:700">'+l.name+'</td>'+
       '<td style="font-family:monospace;color:var(--text3)">#'+l.id+'</td>'+
       '<td>'+mbadge(l.menu,l.menuName||mn[l.menu]||'?')+'</td>'+
-      '<td>'+sbadge(l.status)+'</td></tr>';
-  }).join('')||'<tr><td colspan="5" class="ec">Belum ada log</td></tr>';
+      '<td>'+sbadge(l.status)+'</td>'+
+      detailCell(l.detail)+'</tr>';
+  }).join('')||'<tr><td colspan="6" class="ec">Belum ada log</td></tr>';
 
-  var prob=logEntries.filter(function(l){return !l.onTime||l.menu===6||l.status==='WAJIB DARURAT'||l.status==='TERLAMBAT';});
+  // [V4-4] Log tidak sesuai — filter & tampilkan keterangan detail
+  var prob=logEntries.filter(function(l){
+    return l.onTime===false||l.menu===6||
+           l.status==='WAJIB DARURAT'||l.status==='TERLAMBAT'||
+           l.status==='TERLALU AWAL'||l.status==='ACCESS DENIED'||
+           l.status==='PULANG CEPAT'||l.status==='DIBLOKIR';
+  });
   var etb=document.getElementById('emerg-tb');
   etb.innerHTML=prob.map(function(l){
     return '<tr>'+timeCell(l.dt)+
       '<td style="font-weight:700">'+l.name+'</td>'+
       '<td style="font-family:monospace;color:var(--text3)">#'+l.id+'</td>'+
-      '<td><span class="badge br">'+(l.menuName||mn[l.menu]||'?')+'</span></td>'+
+      '<td>'+mbadge(l.menu,l.menuName||mn[l.menu]||'?')+'</td>'+
       '<td>'+sbadge(l.status)+'</td>'+
-      '<td style="font-size:9px;color:var(--text3)">'+(l.menu===6?'Darurat':l.status==='TERLAMBAT'?'Terlambat':'Masalah lainnya')+'</td></tr>';
+      // [V4-4] Keterangan detail — wajib tampil di log tidak sesuai
+      '<td style="font-size:10px;color:var(--orange);max-width:220px">'+(l.detail||getDefaultDetail(l))+'</td></tr>';
   }).join('')||'<tr><td colspan="6" class="ec">Tidak ada masalah</td></tr>';
 }
 
-// [FIX7] Render raw scan
+// [V4-4] Fallback detail jika tidak ada dari ESP
+function getDefaultDetail(l){
+  if(l.status==='TERLAMBAT') return 'Melewati batas toleransi jam masuk';
+  if(l.status==='TERLALU AWAL') return 'Terlalu awal dari jadwal yang ditentukan';
+  if(l.status==='PULANG CEPAT') return 'Pulang sebelum jadwal yang ditentukan';
+  if(l.status==='ACCESS DENIED') return 'Akses ditolak sistem';
+  if(l.status==='WAJIB DARURAT') return 'Harus gunakan menu Darurat terlebih dahulu';
+  if(l.status==='DIBLOKIR') return 'Izin belum diaktifkan admin';
+  if(l.menu===6) return 'Absensi menggunakan mode Darurat';
+  return '—';
+}
+
 function renderRaw(){
   var tb=document.getElementById('raw-tb');
   var mn={1:'Masuk Kerja',2:'Pulang Kerja',3:'Istirahat',4:'Izin Tugas',5:'Izin Tinggal',6:'Darurat'};
@@ -739,15 +833,17 @@ function resetEnroll(){
 function saveNewEmp(){
   var id=document.getElementById('nid').value,nm=document.getElementById('nname').value.trim();
   if(!nm){toast('Masukkan nama','tr');return;}
+  var isAdmin=document.getElementById('nadmin').checked?1:0;
   mqttPublish(T_CMD,JSON.stringify({
     cmd:'setemp',id:+id,name:nm,
+    isAdmin:isAdmin,
     inTime:document.getElementById('nin').value,
     outTime:document.getElementById('nout').value,
     breakIn:document.getElementById('nbrin').value,
     breakOut:document.getElementById('nbrout').value,
     izinTugas:0,izinTinggal:0
   }));
-  toast('"'+nm+'" disimpan ✓','tg');
+  toast('"'+nm+'" disimpan'+(isAdmin?' sebagai ADMIN':'')+' ✓','tg');
   resetEnroll();
 }
 
@@ -756,6 +852,23 @@ function cmdToggle(id){
   if(!confirm((e&&e.enabled?'Nonaktifkan':'Aktifkan')+' karyawan #'+id+'?'))return;
   mqttPublish(T_CMD,JSON.stringify({cmd:'toggle',id:id}));
   toast('Perintah toggle dikirim ✓','tg');
+}
+
+// [V4-3] Toggle admin status
+function cmdToggleAdmin(id){
+  var e=employees.find(function(x){return x.id===id;});
+  if(!e)return;
+  var action=e.isAdmin?'Cabut hak admin dari':'Jadikan Admin untuk';
+  if(!confirm(action+' "'+e.name+'" (#'+id+')?'))return;
+  mqttPublish(T_CMD,JSON.stringify({
+    cmd:'setemp',id:id,name:e.name,
+    isAdmin:e.isAdmin?0:1,
+    inTime:e.inTime,outTime:e.outTime,
+    breakIn:e.breakIn,breakOut:e.breakOut,
+    izinTugas:e.izinTugas?1:0,izinTugasJam:e.izinTugasJam||'08:00',
+    izinTinggal:e.izinTinggal?1:0,izinTinggalJam:e.izinTinggalJam||'08:00'
+  }));
+  toast('Status admin diubah ✓','tg');
 }
 
 function cmdDelete(id,name){
@@ -785,11 +898,19 @@ function cmdResetStat(){
 }
 
 // ── Edit ─────────────────────────────────────────────────────
+function toggleAdminFields(){
+  var isAdmin=document.getElementById('eadmin').checked;
+  var schedDiv=document.getElementById('eadmin-sched');
+  schedDiv.style.opacity=isAdmin?'0.4':'1';
+  schedDiv.style.pointerEvents=isAdmin?'none':'auto';
+}
+
 function openEdit(id){
   var e=employees.find(function(x){return x.id===id;});if(!e)return;
   document.getElementById('eid').value=e.id;
   document.getElementById('eid-d').value='#'+e.id;
   document.getElementById('ename').value=e.name;
+  document.getElementById('eadmin').checked=e.isAdmin||false; // [V4-3]
   document.getElementById('ein').value=e.inTime;
   document.getElementById('eout').value=e.outTime;
   document.getElementById('ebrin').value=e.breakIn;
@@ -798,14 +919,17 @@ function openEdit(id){
   document.getElementById('eit-j').value=e.izinTugasJam||'08:00';
   document.getElementById('etn-a').checked=e.izinTinggal||false;
   document.getElementById('etn-j').value=e.izinTinggalJam||'08:00';
+  toggleAdminFields();
   document.getElementById('medit').classList.add('open');
 }
 function closeMod(id){document.getElementById(id).classList.remove('open');}
 function saveEdit(){
   var id=document.getElementById('eid').value,nm=document.getElementById('ename').value.trim();
   if(!nm){toast('Nama kosong','tr');return;}
+  var isAdmin=document.getElementById('eadmin').checked?1:0;
   mqttPublish(T_CMD,JSON.stringify({
     cmd:'setemp',id:+id,name:nm,
+    isAdmin:isAdmin, // [V4-3]
     inTime:document.getElementById('ein').value,
     outTime:document.getElementById('eout').value,
     breakIn:document.getElementById('ebrin').value,
@@ -817,6 +941,13 @@ function saveEdit(){
   }));
   toast('Tersimpan ✓','tg');closeMod('medit');
 }
+
+// ── [V4-3] Admin toggle handler for enroll page ──────────────
+document.getElementById('nadmin').addEventListener('change',function(){
+  var s=document.getElementById('nadmin-sched');
+  s.style.opacity=this.checked?'0.4':'1';
+  s.style.pointerEvents=this.checked?'none':'auto';
+});
 
 // ── Clock & Heartbeat monitor ─────────────────────────────────
 setInterval(function(){
@@ -831,7 +962,7 @@ document.getElementById('set-date').value=new Date().toISOString().slice(0,10);
 document.getElementById('set-time').value=new Date().toTimeString().slice(0,5);
 setPill('pill-wifi','warn','Connecting...');
 setPill('pill-mqtt','warn','Connecting...');
-renderLogs(); updateStats(); // render log dari localStorage
+renderLogs(); updateStats();
 mqttConnect();
 </script>
 </body>
